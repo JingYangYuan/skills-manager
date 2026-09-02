@@ -83,6 +83,19 @@ impl AppSettingsManager {
                 extra_paths: vec![],
             },
             AgentConfig {
+                name: "antigravity".to_string(),
+                display_name: "Google Antigravity".to_string(),
+                path: "~/.gemini".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![
+                    "~/.antigravity".to_string(),
+                    "~/.gemini/config".to_string(),
+                    "~/.gemini/antigravity-cli/builtin".to_string(),
+                ],
+            },
+            AgentConfig {
                 name: "codex".to_string(),
                 display_name: "Codex".to_string(),
                 path: "~/.codex".to_string(),
@@ -90,6 +103,45 @@ impl AppSettingsManager {
                 enabled: true,
                 detected: false,
                 extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "agents".to_string(),
+                display_name: "Universal Agents".to_string(),
+                path: "~/.agents".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec!["~/.config/agents".to_string()],
+            },
+            AgentConfig {
+                name: "copilot".to_string(),
+                display_name: "GitHub Copilot".to_string(),
+                path: "~/.copilot".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "workbuddy".to_string(),
+                display_name: "WorkBuddy".to_string(),
+                path: "~/.workbuddy".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec!["~/WorkBuddy".to_string()],
+            },
+            AgentConfig {
+                name: "zcode".to_string(),
+                display_name: "ZCode".to_string(),
+                path: "~/.zcode".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![
+                    "~/ZCodeProject".to_string(),
+                    "~/AppData/Roaming/ZCode".to_string(),
+                ],
             },
             AgentConfig {
                 name: "openclaw".to_string(),
@@ -103,7 +155,58 @@ impl AppSettingsManager {
             AgentConfig {
                 name: "opencode".to_string(),
                 display_name: "OpenCode".to_string(),
-                path: "~/.opencode".to_string(),
+                path: "~/.config/opencode".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![
+                    "~/.opencode".to_string(),
+                    "~/AppData/Roaming/ai.opencode.desktop".to_string(),
+                ],
+            },
+            AgentConfig {
+                name: "kimi".to_string(),
+                display_name: "Kimi Code".to_string(),
+                path: "~/.kimi-code".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "marscode".to_string(),
+                display_name: "MarsCode".to_string(),
+                path: "~/.marscode".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![
+                    "~/.marscode/builtin".to_string(),
+                    "~/.marscode/builtin_skills".to_string(),
+                ],
+            },
+            AgentConfig {
+                name: "openclaude".to_string(),
+                display_name: "OpenClaude".to_string(),
+                path: "~/.openclaude".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "hermes".to_string(),
+                display_name: "Hermes Agent".to_string(),
+                path: "~/.hermes".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "grok".to_string(),
+                display_name: "Grok".to_string(),
+                path: "~/.grok".to_string(),
                 skills_path: "skills".to_string(),
                 enabled: true,
                 detected: false,
@@ -116,21 +219,12 @@ impl AppSettingsManager {
                 skills_path: "skills".to_string(),
                 enabled: true,
                 detected: false,
-                extra_paths: vec![],
+                extra_paths: vec!["~/.trae-cn".to_string()],
             },
             AgentConfig {
                 name: "qoder".to_string(),
                 display_name: "Qoder".to_string(),
                 path: "~/.qoder".to_string(),
-                skills_path: "skills".to_string(),
-                enabled: true,
-                detected: false,
-                extra_paths: vec![],
-            },
-            AgentConfig {
-                name: "antigravity".to_string(),
-                display_name: "Antigravity".to_string(),
-                path: "~/.antigravity".to_string(),
                 skills_path: "skills".to_string(),
                 enabled: true,
                 detected: false,
@@ -176,7 +270,7 @@ impl AppSettingsManager {
             write_default_config(config_path)?
         };
 
-        const REMOVED_PRESETS: &[&str] = &["trae-cn"];
+        const REMOVED_PRESETS: &[&str] = &["trae-cn", "commandcode", "lingma", "arkcli"];
         let before_len = config.agents.len();
         config
             .agents
@@ -195,9 +289,27 @@ impl AppSettingsManager {
                 .iter_mut()
                 .find(|agent| agent.name == preset.name)
             {
-                if existing.extra_paths.is_empty() && !preset.extra_paths.is_empty() {
-                    existing.extra_paths = preset.extra_paths.clone();
+                if existing.path != preset.path
+                    && (existing.name == "antigravity" || existing.name == "opencode")
+                {
+                    eprintln!(
+                        "[settings] updating path for {}: {} -> {}",
+                        existing.name, existing.path, preset.path
+                    );
+                    existing.path = preset.path.clone();
                     config_updated = true;
+                }
+
+                if existing.display_name != preset.display_name {
+                    existing.display_name = preset.display_name.clone();
+                    config_updated = true;
+                }
+
+                for ep in &preset.extra_paths {
+                    if !existing.extra_paths.contains(ep) {
+                        existing.extra_paths.push(ep.clone());
+                        config_updated = true;
+                    }
                 }
 
                 if existing.skills_path != preset.skills_path {

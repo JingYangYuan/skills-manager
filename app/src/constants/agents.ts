@@ -8,6 +8,15 @@ import traeIcon from '@/assets/agents/trae.svg';
 import qoderIcon from '@/assets/agents/qoder.svg';
 import antigravityIcon from '@/assets/agents/antigravity.svg';
 import kiroIcon from '@/assets/agents/kiro.svg';
+import agentsIcon from '@/assets/agents/agents.svg';
+import copilotIcon from '@/assets/agents/copilot.svg';
+import workbuddyIcon from '@/assets/agents/workbuddy.svg';
+import zcodeIcon from '@/assets/agents/zcode.svg';
+import kimiIcon from '@/assets/agents/kimi.svg';
+import marscodeIcon from '@/assets/agents/marscode.svg';
+import openclaudeIcon from '@/assets/agents/openclaude.svg';
+import hermesIcon from '@/assets/agents/hermes.svg';
+import grokIcon from '@/assets/agents/grok.svg';
 
 /**
  * 前端维护的 agent 元信息 —— 单一数据源。
@@ -47,6 +56,13 @@ const AGENT_META = {
     rootPath: '~/.cursor',
     icon: cursorIcon,
   },
+  antigravity: {
+    name: 'antigravity',
+    shortName: 'Antigravity',
+    displayName: 'Google Antigravity',
+    rootPath: '~/.gemini',
+    icon: antigravityIcon,
+  },
   codex: {
     name: 'codex',
     shortName: 'Codex',
@@ -54,6 +70,35 @@ const AGENT_META = {
     rootPath: '~/.codex',
     icon: gptIcon,
     invertInDark: true,
+  },
+  agents: {
+    name: 'agents',
+    shortName: 'Agents',
+    displayName: 'Universal Agents',
+    rootPath: '~/.agents',
+    icon: agentsIcon,
+  },
+  copilot: {
+    name: 'copilot',
+    shortName: 'Copilot',
+    displayName: 'GitHub Copilot',
+    rootPath: '~/.copilot',
+    icon: copilotIcon,
+    invertInDark: true,
+  },
+  workbuddy: {
+    name: 'workbuddy',
+    shortName: 'WorkBuddy',
+    displayName: 'WorkBuddy',
+    rootPath: '~/.workbuddy',
+    icon: workbuddyIcon,
+  },
+  zcode: {
+    name: 'zcode',
+    shortName: 'ZCode',
+    displayName: 'ZCode',
+    rootPath: '~/.zcode',
+    icon: zcodeIcon,
   },
   openclaw: {
     name: 'openclaw',
@@ -66,8 +111,44 @@ const AGENT_META = {
     name: 'opencode',
     shortName: 'OpenCode',
     displayName: 'OpenCode',
-    rootPath: '~/.opencode',
+    rootPath: '~/.config/opencode',
     icon: opencodeIcon,
+    invertInDark: true,
+  },
+  kimi: {
+    name: 'kimi',
+    shortName: 'Kimi',
+    displayName: 'Kimi Code',
+    rootPath: '~/.kimi-code',
+    icon: kimiIcon,
+  },
+  marscode: {
+    name: 'marscode',
+    shortName: 'MarsCode',
+    displayName: 'MarsCode',
+    rootPath: '~/.marscode',
+    icon: marscodeIcon,
+  },
+  openclaude: {
+    name: 'openclaude',
+    shortName: 'OpenClaude',
+    displayName: 'OpenClaude',
+    rootPath: '~/.openclaude',
+    icon: openclaudeIcon,
+  },
+  hermes: {
+    name: 'hermes',
+    shortName: 'Hermes',
+    displayName: 'Hermes Agent',
+    rootPath: '~/.hermes',
+    icon: hermesIcon,
+  },
+  grok: {
+    name: 'grok',
+    shortName: 'Grok',
+    displayName: 'Grok',
+    rootPath: '~/.grok',
+    icon: grokIcon,
     invertInDark: true,
   },
   trae: {
@@ -83,13 +164,6 @@ const AGENT_META = {
     displayName: 'Qoder',
     rootPath: '~/.qoder',
     icon: qoderIcon,
-  },
-  antigravity: {
-    name: 'antigravity',
-    shortName: 'Antigravity',
-    displayName: 'Antigravity',
-    rootPath: '~/.antigravity',
-    icon: antigravityIcon,
   },
   kiro: {
     name: 'kiro',

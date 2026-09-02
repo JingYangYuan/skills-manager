@@ -15,23 +15,58 @@ const AGENT_SCAN_PATHS: Record<string, string[]> = {
     '~/.cursor/skills-cursor',
     '~/.cursor/plugins/cache/cursor-public',
   ],
-  openclaw: [
-    '~/.openclaw/skills',
+  antigravity: [
+    '~/.gemini/skills',
+    '~/.gemini/config/skills',
+    '~/.antigravity/skills',
   ],
   codex: [
     '~/.codex/skills',
   ],
+  agents: [
+    '~/.agents/skills',
+    '~/.config/agents/skills',
+  ],
+  copilot: [
+    '~/.copilot/skills',
+  ],
+  workbuddy: [
+    '~/.workbuddy/skills',
+    '~/WorkBuddy/skills',
+  ],
+  zcode: [
+    '~/.zcode/skills',
+    '~/ZCodeProject/skills',
+  ],
+  openclaw: [
+    '~/.openclaw/skills',
+  ],
   opencode: [
+    '~/.config/opencode/skills',
     '~/.opencode/skills',
+  ],
+  kimi: [
+    '~/.kimi-code/skills',
+  ],
+  marscode: [
+    '~/.marscode/skills',
+    '~/.marscode/builtin_skills',
+  ],
+  openclaude: [
+    '~/.openclaude/skills',
+  ],
+  hermes: [
+    '~/.hermes/skills',
+  ],
+  grok: [
+    '~/.grok/skills',
   ],
   trae: [
     '~/.trae/skills',
+    '~/.trae-cn/skills',
   ],
   qoder: [
     '~/.qoder/skills',
-  ],
-  antigravity: [
-    '~/.antigravity/skills',
   ],
   kiro: [
     '~/.kiro/skills',

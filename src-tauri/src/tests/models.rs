@@ -127,6 +127,18 @@ mod tests {
         let sources = vec!["codex".to_string(), "claude".to_string()];
         assert_eq!(pick_default_primary(&sources), Some("claude".to_string()));
 
+        let sources = vec!["agents".to_string(), "antigravity".to_string()];
+        assert_eq!(
+            pick_default_primary(&sources),
+            Some("antigravity".to_string())
+        );
+
+        let sources = vec!["copilot".to_string(), "workbuddy".to_string()];
+        assert_eq!(
+            pick_default_primary(&sources),
+            Some("workbuddy".to_string())
+        );
+
         let sources: Vec<String> = vec![];
         assert_eq!(pick_default_primary(&sources), None);
     }

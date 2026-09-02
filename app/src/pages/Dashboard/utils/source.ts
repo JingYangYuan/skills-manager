@@ -14,43 +14,65 @@ import { getAgentShortName, KNOWN_AGENTS } from '@/constants';
 export const SOURCE = {
   All: 'all',
   Global: 'global',
-  Cursor: 'cursor',
   Claude: 'claude',
-  OpenClaw: 'openclaw',
+  Cursor: 'cursor',
+  Antigravity: 'antigravity',
   Codex: 'codex',
+  Agents: 'agents',
+  Copilot: 'copilot',
+  WorkBuddy: 'workbuddy',
+  ZCode: 'zcode',
+  OpenClaw: 'openclaw',
+  OpenCode: 'opencode',
+  Kimi: 'kimi',
+  MarsCode: 'marscode',
+  OpenClaude: 'openclaude',
+  Hermes: 'hermes',
+  Grok: 'grok',
+  Trae: 'trae',
+  Qoder: 'qoder',
+  Kiro: 'kiro',
 } as const;
 
-type Source = typeof SOURCE[keyof typeof SOURCE];
+export type Source = typeof SOURCE[keyof typeof SOURCE];
 
-const SOURCE_BADGE_STYLES: Record<Source, string> = {
+const SOURCE_BADGE_STYLES: Record<string, string> = {
   [SOURCE.All]: 'bg-gray-50 dark:bg-gray-500/10 text-gray-600 dark:text-gray-400',
   [SOURCE.Global]: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400',
-  [SOURCE.Cursor]: 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400',
   [SOURCE.Claude]: 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400',
-  [SOURCE.OpenClaw]: 'bg-[var(--accent-primary-soft)] text-[var(--accent-primary)]',
+  [SOURCE.Cursor]: 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400',
+  [SOURCE.Antigravity]: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
   [SOURCE.Codex]: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  [SOURCE.Agents]: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+  [SOURCE.Copilot]: 'bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-300',
+  [SOURCE.WorkBuddy]: 'bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400',
+  [SOURCE.ZCode]: 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  [SOURCE.OpenClaw]: 'bg-[var(--accent-primary-soft)] text-[var(--accent-primary)]',
+  [SOURCE.OpenCode]: 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400',
+  [SOURCE.Kimi]: 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
+  [SOURCE.MarsCode]: 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  [SOURCE.OpenClaude]: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+  [SOURCE.Hermes]: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  [SOURCE.Grok]: 'bg-neutral-100 dark:bg-neutral-500/10 text-neutral-800 dark:text-neutral-200',
+  [SOURCE.Trae]: 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400',
+  [SOURCE.Qoder]: 'bg-fuchsia-50 dark:bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400',
+  [SOURCE.Kiro]: 'bg-pink-50 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400',
 };
 
 export const sourceLabel = (s: string) => (s === SOURCE.Global ? 'Root' : s);
 
 export const badgeClass = (src?: string) =>
-  SOURCE_BADGE_STYLES[(src as Source) ?? SOURCE.Global] || SOURCE_BADGE_STYLES[SOURCE.Global];
+  SOURCE_BADGE_STYLES[src ?? SOURCE.Global] || SOURCE_BADGE_STYLES[SOURCE.Global];
 
 /**
- * Toast / 描述性文案里使用的首字母大写简短展示名。
- * 非 Global 的展示名从 {@link AGENT_META} 派生，新增 agent 无需改这里。
+ * Toast / 描述性文案里使用的简短展示名。
+ * 非 Global 的展示名直接从 AGENT_META 派生。
  */
-const SOURCE_DISPLAY_NAME: Record<Source, string> = {
-  [SOURCE.All]: 'All',
-  [SOURCE.Global]: 'Root',
-  [SOURCE.Cursor]: getAgentShortName(SOURCE.Cursor),
-  [SOURCE.Claude]: getAgentShortName(SOURCE.Claude),
-  [SOURCE.OpenClaw]: getAgentShortName(SOURCE.OpenClaw),
-  [SOURCE.Codex]: getAgentShortName(SOURCE.Codex),
+export const sourceDisplayName = (s?: string) => {
+  if (!s || s === SOURCE.Global) return 'Root';
+  if (s === SOURCE.All) return 'All';
+  return getAgentShortName(s);
 };
-
-export const sourceDisplayName = (s?: string) =>
-  SOURCE_DISPLAY_NAME[(s as Source) ?? SOURCE.Global] ?? s ?? SOURCE.Global;
 
 export const isSource = (v: unknown): v is string =>
   typeof v === 'string' &&

@@ -123,15 +123,29 @@ impl SkillEntry {
     }
 }
 
-/// 按优先级 `global > claude > cursor > openclaw > codex > ...` 选默认主源。
+/// 按优先级 `global > claude > cursor > antigravity > codex > agents > workbuddy > zcode > copilot > openclaw > opencode > ...` 选默认主源。
 pub fn pick_default_primary(sources: &[String]) -> Option<String> {
     fn priority(s: &str) -> u32 {
         match s {
             SOURCE_GLOBAL => 0,
             "claude" => 1,
             "cursor" => 2,
-            "openclaw" => 3,
+            "antigravity" => 3,
             "codex" => 4,
+            "agents" => 5,
+            "workbuddy" => 6,
+            "zcode" => 7,
+            "copilot" => 8,
+            "openclaw" => 9,
+            "opencode" => 10,
+            "kimi" => 11,
+            "marscode" => 12,
+            "openclaude" => 13,
+            "hermes" => 14,
+            "grok" => 15,
+            "trae" => 16,
+            "qoder" => 17,
+            "kiro" => 18,
             _ => 100,
         }
     }
