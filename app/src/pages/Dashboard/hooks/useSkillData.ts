@@ -4,6 +4,7 @@ import { skillsApi, agentsApi } from '@/api/tauri';
 import type { SkillMetadata, AgentConfig } from '@/types';
 import { isTauri } from '@/lib/tauri-env';
 import { WINDOW_EVENTS } from '@/constants/events';
+import { registerDynamicAgents } from '@/constants/agents';
 
 /**
  * Schema v2 之后，`enabled` 由后端 scanner 根据 `agent_enabled` 派生，
@@ -42,6 +43,7 @@ export const useSkillData = () => {
       if (import.meta.env.DEV) console.log('Detecting agents...');
       const agentsData = await agentsApi.detect();
       if (import.meta.env.DEV) console.log('Agents detected:', agentsData);
+      registerDynamicAgents(agentsData);
       setAgents(agentsData);
     } catch (error) {
       console.error('Failed to detect agents:', error);

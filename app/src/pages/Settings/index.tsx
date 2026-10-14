@@ -42,7 +42,7 @@ function Settings() {
     return () => window.removeEventListener(WINDOW_EVENTS.settingsSetTab, handler as EventListener);
   }, []);
 
-  const { agents } = useSettingsData();
+  const { agents, loadAgents } = useSettingsData();
 
   const [advancedMode, setAdvancedMode] = useState(() =>
     localStorage.getItem(LOCAL_STORAGE_KEYS.advancedMode) === 'true'
@@ -128,7 +128,7 @@ function Settings() {
             )}
 
             {activeTab === TAB_TYPE.Agents && (
-              <AgentsSection agents={agents} />
+              <AgentsSection agents={agents} onRefresh={() => void loadAgents()} />
             )}
           </div>
         )}

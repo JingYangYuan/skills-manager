@@ -352,9 +352,21 @@ pub fn remove_link(target: &Path) -> Result<(), LinkerError> {
 
         #[cfg(windows)]
         {
-            // Windows 特殊处理：Junction 必须用 remove_dir
-            eprintln!("Windows: Using remove_dir for Junction");
-            let result = fs::remove_dir(target);
+            // Windows 特殊处理：
+            // - 目录 Junction / 目录 symlink 必须用 remove_dir
+            // - 文件级 symlink 必须用 remove_file（用 remove_dir 会报 ERROR_DIRECTORY 并残留链接）
+            let is_dir_link = fs::symlink_metadata(target)
+                .map(|m| m.file_type().is_dir())
+                .unwrap_or(false);
+            eprintln!(
+                "Windows: removing {} link",
+                if is_dir_link { "directory" } else { "file" }
+            );
+            let result = if is_dir_link {
+                fs::remove_dir(target).or_else(|_| fs::remove_dir_all(target))
+            } else {
+                fs::remove_file(target).or_else(|_| fs::remove_dir(target))
+            };
             match result {
                 Ok(_) => {
                     eprintln!("✅ Successfully removed: {:?}", target);
@@ -445,11 +457,25 @@ pub fn verify_link(skill_path: &Path, link_path: &Path) -> bool {
 
     // 检查是否是符号链接且指向正确目标
     match link_path.read_link() {
-        Ok(target) => target == skill_path,
+        Ok(target) => paths_refer_to_same_location(&target, skill_path),
         Err(_) => {
             // 不是符号链接，检查文件是否相同
             same_file::is_same_file(skill_path, link_path).unwrap_or(false)
         }
+    }
+}
+
+/// 判断两个路径是否指向同一位置。
+/// create_symlink 会先把源路径规范化，而 Windows 上的 8.3 短路径（如 RUNNER~1）、
+/// 大小写差异或残留的 `\\?\` 前缀都会让字面量比较失败，因此这里比较规范化后的结果。
+fn paths_refer_to_same_location(a: &Path, b: &Path) -> bool {
+    if a == b {
+        return true;
+    }
+
+    match (fs::canonicalize(a), fs::canonicalize(b)) {
+        (Ok(ca), Ok(cb)) => strip_extended_prefix(&ca) == strip_extended_prefix(&cb),
+        _ => false,
     }
 }
 

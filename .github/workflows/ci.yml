@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (tsc + vite build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check and build
+        run: pnpm run build
+
+  rust-tests:
+    name: Rust tests (windows-latest)
+    runs-on: windows-latest
+    # 如需同时验证 macOS：把上面一行换成
+    #   strategy:
+    #     fail-fast: false
+    #     matrix:
+    #       os: [windows-latest, macos-latest]
+    #   runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # tauri 的 build.rs 需要 frontendDist（../dist）存在，否则编译失败
+      - name: Build frontend
+        run: pnpm run build
+
+      # Cargo.lock 已随新增依赖（tauri-plugin-dialog）同步，用 --locked 保证可复现
+      - name: Cargo test
+        run: cargo test --manifest-path=src-tauri/Cargo.toml --locked
