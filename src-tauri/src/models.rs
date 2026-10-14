@@ -146,6 +146,8 @@ pub fn pick_default_primary(sources: &[String]) -> Option<String> {
             "trae" => 16,
             "qoder" => 17,
             "kiro" => 18,
+            "pi" => 19,
+            "omp" => 20,
             _ => 100,
         }
     }

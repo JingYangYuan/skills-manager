@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import {
   DndContext,
   closestCenter,
@@ -19,15 +20,19 @@ import { getAgentIcon, needsInvertInDark } from '@/pages/Dashboard/utils/agentHe
 import { agentsApi } from '@/api/tauri';
 import type { AgentConfig } from '@/types';
 import { getAgentScanPaths } from '@/pages/Settings/constants/agentScanPaths';
-import { KNOWN_AGENTS, LOCAL_STORAGE_KEYS } from '@/constants';
+import { KNOWN_AGENTS, LOCAL_STORAGE_KEYS, isCustomAgent } from '@/constants';
 import { readHiddenAgents } from '@/hooks/useHiddenAgents';
 import { sortAgentsByStoredOrder, saveAgentsOrder } from '@/lib/agentOrder';
 import { OCTOPUS_LOGO_URL } from '@/lib/assets';
+import { isTauri } from '@/lib/tauri-env';
+import { useToast } from '@/components/Toast';
 import { ContextMenu, type ContextMenuItem } from '@/components/ContextMenu';
 import { Icon } from '@/components/Icon';
 
 interface AgentsSectionProps {
   agents: AgentConfig[];
+  /** 重新拉取后端 agent 列表（添加/删除后调用） */
+  onRefresh?: () => void;
 }
 
 interface CtxState {
@@ -37,10 +42,48 @@ interface CtxState {
   path: string | null;
 }
 
+/** 列表行所需的 agent 元信息（内置走 AGENT_META，自定义就地合成） */
+interface RowAgent {
+  name: string;
+  displayName: string;
+  rootPath: string;
+  config: AgentConfig;
+  custom: boolean;
+}
+
+/** 与后端 normalize_agent_name 保持一致：trim → 小写 → 空格转 '-' → 仅保留 [a-z0-9_-] */
+export const slugifyAgentName = (raw: string): string =>
+  raw.trim().toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9_-]/g, '');
+
+const RESERVED_AGENT_NAMES = new Set(['global', 'all']);
+
+const buildMergedRows = (backendAgents: AgentConfig[]): RowAgent[] => {
+  const configs: AgentConfig[] = backendAgents.length
+    ? backendAgents
+    : KNOWN_AGENTS.map((meta) => ({
+        name: meta.name,
+        display_name: meta.displayName,
+        path: meta.rootPath,
+        skills_path: 'skills',
+        enabled: true,
+        detected: false,
+        extra_paths: [],
+      }));
+
+  return sortAgentsByStoredOrder(
+    configs.map((config) => ({
+      name: config.name,
+      displayName: config.display_name || config.name,
+      rootPath: config.path,
+      config,
+      custom: isCustomAgent(config.name),
+    })),
+  );
+};
 
 // ---------- 单行可排序子组件 ----------
 interface SortableAgentRowProps {
-  agent: (typeof KNOWN_AGENTS)[number];
+  agent: RowAgent;
   detected: boolean;
   isExpanded: boolean;
   canExpand: boolean;
@@ -48,12 +91,13 @@ interface SortableAgentRowProps {
   onToggleExpand: () => void;
   onOpenPath: (path: string) => void;
   onContextMenu: (path: string) => (e: React.MouseEvent) => void;
+  onDelete: (agent: RowAgent) => void;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
 const SortableAgentRow: React.FC<SortableAgentRowProps> = ({
   agent, detected, isExpanded, canExpand, scanPaths,
-  onToggleExpand, onOpenPath, onContextMenu, t,
+  onToggleExpand, onOpenPath, onContextMenu, onDelete, t,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: agent.name,
@@ -105,6 +149,11 @@ const SortableAgentRow: React.FC<SortableAgentRowProps> = ({
               <span className="text-sm font-bold text-slate-900 dark:text-white">
                 {agent.displayName}
               </span>
+              {agent.custom && (
+                <span className="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-[10px] font-semibold rounded-full">
+                  {t('settings.agents.customBadge')}
+                </span>
+              )}
               {detected ? (
                 <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-semibold rounded-full">
                   {t('settings.agents.installed')}
@@ -120,6 +169,18 @@ const SortableAgentRow: React.FC<SortableAgentRowProps> = ({
             </p>
           </div>
         </button>
+
+        {agent.custom && (
+          <button
+            type="button"
+            onClick={() => onDelete(agent)}
+            aria-label={t('settings.agents.delete')}
+            title={t('settings.agents.delete')}
+            className="shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-slate-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+          >
+            <Icon name="delete" className="text-lg" />
+          </button>
+        )}
 
         {canExpand && (
           <button
@@ -177,22 +238,247 @@ const SortableAgentRow: React.FC<SortableAgentRowProps> = ({
   );
 };
 
-// ---------- 主组件 ----------
-export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents }) => {
+// ---------- 添加自定义 Agent 弹窗 ----------
+interface AddAgentModalProps {
+  open: boolean;
+  existingNames: Set<string>;
+  onClose: () => void;
+  onAdded: (name: string) => void;
+}
+
+const AddAgentModal: React.FC<AddAgentModalProps> = ({ open, existingNames, onClose, onAdded }) => {
   const { t } = useTranslation();
+  const { showToast } = useToast();
+  const [displayName, setDisplayName] = useState('');
+  const [rootPath, setRootPath] = useState('');
+  const [skillsPath, setSkillsPath] = useState('skills');
+  const [submitting, setSubmitting] = useState(false);
+
+  const slug = useMemo(() => slugifyAgentName(displayName), [displayName]);
+
+  const nameError = useMemo(() => {
+    if (!displayName.trim()) return '';
+    if (!slug) return t('settings.agents.errNameInvalid');
+    if (RESERVED_AGENT_NAMES.has(slug)) return t('settings.agents.errNameReserved');
+    if (existingNames.has(slug)) return t('settings.agents.errDuplicate');
+    return '';
+  }, [displayName, slug, existingNames, t]);
+
+  const pathError = useMemo(
+    () => (rootPath.trim() ? '' : t('settings.agents.errPathRequired')),
+    [rootPath, t],
+  );
+  const skillsPathError = useMemo(
+    () => (skillsPath.trim() ? '' : t('settings.agents.errSkillsPathRequired')),
+    [skillsPath, t],
+  );
+
+  const canSubmit = Boolean(displayName.trim()) && Boolean(rootPath.trim()) && Boolean(skillsPath.trim())
+    && !nameError && !pathError && !skillsPathError && !submitting;
+
+  const resetForm = () => {
+    setDisplayName('');
+    setRootPath('');
+    setSkillsPath('skills');
+    setSubmitting(false);
+  };
+
+  const handleClose = () => {
+    if (submitting) return;
+    resetForm();
+    onClose();
+  };
+
+  const handleBrowse = async () => {
+    try {
+      const selected = await openDialog({ directory: true, multiple: false });
+      if (typeof selected === 'string' && selected) setRootPath(selected);
+    } catch {
+      // 用户取消或环境不支持时静默忽略
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    try {
+      await agentsApi.add({
+        name: slug,
+        display_name: displayName.trim(),
+        path: rootPath.trim(),
+        skills_path: skillsPath.trim(),
+        enabled: true,
+        detected: false,
+        extra_paths: [],
+      });
+      showToast('success', t('settings.agents.addSuccess', { name: displayName.trim() }));
+      resetForm();
+      onAdded(slug);
+    } catch (err) {
+      console.error('Failed to add agent:', err);
+      showToast('error', t('settings.agents.addFailed'), String(err));
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+
+  const inputClass = (hasError: boolean) =>
+    `w-full px-3 py-2 rounded-lg border text-sm bg-[var(--bg-card)] dark:bg-dark-bg-tertiary text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 transition-colors ${
+      hasError
+        ? 'border-red-400 dark:border-red-500/60 focus:border-red-500 focus:ring-red-500/30'
+        : 'border-[var(--border-color)] dark:border-dark-border focus:border-[var(--accent-primary)] focus:ring-[var(--accent-primary)]/30'
+    }`;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[2px] flex items-center justify-center p-4"
+      onClick={handleClose}
+    >
+      <div
+        className="bg-[var(--bg-card)] dark:bg-dark-bg-card rounded-2xl border border-[var(--border-color)] dark:border-dark-border shadow-2xl w-full max-w-md overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-[var(--border-color)] dark:border-dark-border flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              {t('settings.agents.addTitle')}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
+              {t('settings.agents.addSubtitle')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-200 transition-colors"
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <div className="px-6 py-4 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-gray-300 mb-1.5">
+              {t('settings.agents.addDisplayName')} <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder={t('settings.agents.addDisplayNamePlaceholder')}
+              className={inputClass(Boolean(nameError))}
+              autoFocus
+            />
+            {slug && !nameError && (
+              <p className="mt-1 text-[11px] text-slate-400 dark:text-gray-500">
+                {t('settings.agents.slugPreview')}: <span className="font-mono">{slug}</span>
+              </p>
+            )}
+            {nameError && (
+              <p className="mt-1 text-[11px] text-red-500">{nameError}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-gray-300 mb-1.5">
+              {t('settings.agents.addRootPath')} <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={rootPath}
+                onChange={(e) => setRootPath(e.target.value)}
+                placeholder={t('settings.agents.addRootPathPlaceholder')}
+                className={`${inputClass(Boolean(pathError))} font-mono`}
+              />
+              <button
+                type="button"
+                onClick={handleBrowse}
+                disabled={!isTauri()}
+                title={t('settings.agents.browse')}
+                className="shrink-0 px-3 rounded-lg border border-[var(--border-color)] dark:border-dark-border bg-[var(--bg-card)] dark:bg-dark-bg-card hover:border-[var(--accent-primary)]/40 hover:text-[var(--accent-primary)] text-slate-500 dark:text-gray-400 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Icon name="folder_open" className="text-lg" />
+              </button>
+            </div>
+            {pathError && <p className="mt-1 text-[11px] text-red-500">{pathError}</p>}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-gray-300 mb-1.5">
+              {t('settings.agents.addSkillsPath')} <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={skillsPath}
+              onChange={(e) => setSkillsPath(e.target.value)}
+              placeholder="skills"
+              className={`${inputClass(Boolean(skillsPathError))} font-mono`}
+            />
+            <p className="mt-1 text-[11px] text-slate-400 dark:text-gray-500">
+              {t('settings.agents.addSkillsPathHint')}
+            </p>
+            {skillsPathError && <p className="mt-1 text-[11px] text-red-500">{skillsPathError}</p>}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-[var(--border-color)] dark:border-dark-border flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={submitting}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-dark-bg-tertiary transition-colors disabled:opacity-50"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-strong)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {submitting && <Icon name="progress_activity" className="animate-spin text-base" />}
+            {t('settings.agents.addConfirm')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---------- 主组件 ----------
+export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents, onRefresh }) => {
+  const { t } = useTranslation();
+  const { showToast } = useToast();
   const detectedSet = useMemo(
     () => new Set(agents.filter(a => a.detected).map(a => a.name)),
     [agents],
   );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [orderedAgents, setOrderedAgents] = useState(() => sortAgentsByStoredOrder([...KNOWN_AGENTS]));
+  const [orderedAgents, setOrderedAgents] = useState<RowAgent[]>(() => buildMergedRows(agents));
   const [hiddenAgentNames, setHiddenAgentNames] = useState<Set<string>>(readHiddenAgents);
   const [manageOpen, setManageOpen] = useState(false);
   const [draft, setDraft] = useState<Set<string>>(new Set());
+  const [addOpen, setAddOpen] = useState(false);
+  const [deleting, setDeleting] = useState<RowAgent | null>(null);
+
+  // 后端列表变化（初次加载、添加、删除后刷新）时重建合并列表，保持存储的排序
+  useEffect(() => {
+    setOrderedAgents(buildMergedRows(agents));
+  }, [agents]);
+
+  const existingNames = useMemo(
+    () => new Set(orderedAgents.map(a => a.name)),
+    [orderedAgents],
+  );
 
   const visibleOrderedAgents = useMemo(() => {
-    const detected: typeof orderedAgents = [];
-    const undetected: typeof orderedAgents = [];
+    const detected: RowAgent[] = [];
+    const undetected: RowAgent[] = [];
     for (const a of orderedAgents) {
       if (hiddenAgentNames.has(a.name)) continue;
       (detectedSet.has(a.name) ? detected : undetected).push(a);
@@ -254,6 +540,37 @@ export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents }) => {
     agentsApi.openFolderPath(path).catch(() => { });
   };
 
+  const handleAdded = () => {
+    setAddOpen(false);
+    onRefresh?.();
+  };
+
+  const handleDelete = async (agent: RowAgent) => {
+    setDeleting(null);
+    try {
+      await agentsApi.remove(agent.name);
+      showToast('success', t('settings.agents.removeSuccess', { name: agent.displayName }));
+      // 顺带清理隐藏列表里的残留
+      if (hiddenAgentNames.has(agent.name)) {
+        const next = new Set(hiddenAgentNames);
+        next.delete(agent.name);
+        setHiddenAgentNames(next);
+        try {
+          const value = JSON.stringify([...next]);
+          localStorage.setItem(LOCAL_STORAGE_KEYS.hiddenAgents, value);
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: LOCAL_STORAGE_KEYS.hiddenAgents,
+            newValue: value,
+          }));
+        } catch { /* ignore */ }
+      }
+      onRefresh?.();
+    } catch (err) {
+      console.error('Failed to remove agent:', err);
+      showToast('error', t('settings.agents.removeFailed'), String(err));
+    }
+  };
+
   const [ctxMenu, setCtxMenu] = useState<CtxState>({ open: false, x: 0, y: 0, path: null });
   const closeCtxMenu = () => setCtxMenu(s => ({ ...s, open: false }));
   const openCtxMenu = (path: string) => (e: React.MouseEvent) => {
@@ -306,18 +623,29 @@ export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents }) => {
               {t('settings.agents.subtitle')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openManage}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-color)] dark:border-dark-border bg-[var(--bg-card)] dark:bg-dark-bg-card hover:border-[var(--accent-primary)]/40 hover:text-[var(--accent-primary)] text-slate-500 dark:text-gray-400 text-sm font-medium transition-colors shrink-0"
-          >
-            <Icon name="tune" className="text-base" />
-            {hiddenAgentNames.size > 0 && (
-              <span className="w-4 h-4 rounded-full bg-[var(--accent-primary)] text-white text-[10px] font-bold flex items-center justify-center">
-                {hiddenAgentNames.size}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              title={t('settings.agents.add')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-color)] dark:border-dark-border bg-[var(--bg-card)] dark:bg-dark-bg-card hover:border-[var(--accent-primary)]/40 hover:text-[var(--accent-primary)] text-slate-500 dark:text-gray-400 text-sm font-medium transition-colors"
+            >
+              <Icon name="add" className="text-base" />
+              {t('settings.agents.add')}
+            </button>
+            <button
+              type="button"
+              onClick={openManage}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-color)] dark:border-dark-border bg-[var(--bg-card)] dark:bg-dark-bg-card hover:border-[var(--accent-primary)]/40 hover:text-[var(--accent-primary)] text-slate-500 dark:text-gray-400 text-sm font-medium transition-colors"
+            >
+              <Icon name="tune" className="text-base" />
+              {hiddenAgentNames.size > 0 && (
+                <span className="w-4 h-4 rounded-full bg-[var(--accent-primary)] text-white text-[10px] font-bold flex items-center justify-center">
+                  {hiddenAgentNames.size}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -325,7 +653,7 @@ export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents }) => {
             <div className="divide-y divide-[var(--border-color)] dark:divide-dark-border">
               {visibleOrderedAgents.map(agent => {
                 const detected = detectedSet.has(agent.name);
-                const scanPaths = getAgentScanPaths(agent.name);
+                const scanPaths = getAgentScanPaths(agent.config);
                 return (
                   <SortableAgentRow
                     key={agent.name}
@@ -337,6 +665,7 @@ export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents }) => {
                     onToggleExpand={() => toggleExpand(agent.name)}
                     onOpenPath={handleOpenPath}
                     onContextMenu={openCtxMenu}
+                    onDelete={setDeleting}
                     t={t}
                   />
                 );
@@ -353,6 +682,52 @@ export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents }) => {
         items={ctxItems}
         onClose={closeCtxMenu}
       />
+
+      {/* Add Custom Agent Modal */}
+      <AddAgentModal
+        open={addOpen}
+        existingNames={existingNames}
+        onClose={() => setAddOpen(false)}
+        onAdded={handleAdded}
+      />
+
+      {/* Delete Confirm Modal */}
+      {deleting && (
+        <div
+          className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[2px] flex items-center justify-center p-4"
+          onClick={() => setDeleting(null)}
+        >
+          <div
+            className="bg-[var(--bg-card)] dark:bg-dark-bg-card rounded-2xl border border-[var(--border-color)] dark:border-dark-border shadow-2xl w-full max-w-sm overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-[var(--border-color)] dark:border-dark-border">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                {t('settings.agents.deleteTitle')}
+              </h3>
+            </div>
+            <p className="px-6 py-4 text-sm text-slate-600 dark:text-gray-300">
+              {t('settings.agents.deleteConfirmMsg', { name: deleting.displayName })}
+            </p>
+            <div className="px-6 py-4 border-t border-[var(--border-color)] dark:border-dark-border flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-dark-bg-tertiary transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDelete(deleting)}
+                className="px-4 py-2 rounded-lg text-sm font-bold bg-red-500 text-white hover:bg-red-600 transition-colors"
+              >
+                {t('settings.agents.deleteConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manage Agents Modal */}
       {manageOpen && (
@@ -385,7 +760,7 @@ export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents }) => {
 
             {/* Agent grid */}
             <div className="p-4 grid grid-cols-3 gap-2 max-h-80 overflow-y-auto">
-              {KNOWN_AGENTS.map(agent => {
+              {orderedAgents.map(agent => {
                 const isVisible = !draft.has(agent.name);
                 return (
                   <button
@@ -405,7 +780,7 @@ export const AgentsSection: React.FC<AgentsSectionProps> = ({ agents }) => {
                     )}
                     <div className="w-10 h-10 rounded-xl bg-[var(--shell-surface-soft)] dark:bg-dark-bg-tertiary flex items-center justify-center overflow-hidden">
                       <img
-                        src={agent.icon}
+                        src={getAgentIcon(agent.name)}
                         alt={agent.displayName}
                         className={`w-6 h-6 object-contain ${needsInvertInDark(agent.name) ? 'dark:invert' : ''}`}
                       />

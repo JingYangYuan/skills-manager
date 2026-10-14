@@ -54,6 +54,9 @@ pub enum AppSettingsError {
 
     #[error("Agent already exists: {0}")]
     AgentAlreadyExists(String),
+
+    #[error("Invalid agent config: {0}")]
+    InvalidAgent(String),
 }
 
 pub struct AppSettingsManager {
@@ -239,6 +242,24 @@ impl AppSettingsManager {
                 detected: false,
                 extra_paths: vec![],
             },
+            AgentConfig {
+                name: "pi".to_string(),
+                display_name: "Pi".to_string(),
+                path: "~/.pi".to_string(),
+                skills_path: "agent/skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "omp".to_string(),
+                display_name: "OMP".to_string(),
+                path: "~/.omp".to_string(),
+                skills_path: "agent/skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![],
+            },
         ]
     }
 
@@ -352,7 +373,51 @@ impl AppSettingsManager {
         Ok(())
     }
 
-    pub fn add_agent(&mut self, agent: AgentConfig) -> Result<(), AppSettingsError> {
+    /// 保留字：与前端 SOURCE 语义冲突的 agent name 不允许使用。
+    const RESERVED_AGENT_NAMES: &[&str] = &["global", "all"];
+
+    /// 把任意输入归一化为合法的机器名：trim → 小写 → 空格转 `-` → 仅保留 [a-z0-9_-]。
+    fn normalize_agent_name(raw: &str) -> String {
+        raw.trim()
+            .to_lowercase()
+            .replace(' ', "-")
+            .chars()
+            .filter(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == '-' || *c == '_')
+            .collect()
+    }
+
+    /// 归一化 skills 子路径：trim、去首尾斜杠、反斜杠统一为 `/`。
+    fn normalize_skills_path(raw: &str) -> String {
+        raw.trim().replace('\\', "/").trim_matches('/').to_string()
+    }
+
+    pub fn add_agent(&mut self, mut agent: AgentConfig) -> Result<(), AppSettingsError> {
+        agent.name = Self::normalize_agent_name(&agent.name);
+        agent.path = agent.path.trim().to_string();
+        agent.skills_path = Self::normalize_skills_path(&agent.skills_path);
+
+        if agent.name.is_empty() {
+            return Err(AppSettingsError::InvalidAgent(
+                "Agent name is empty or contains no valid characters [a-z0-9_-]".to_string(),
+            ));
+        }
+        if Self::RESERVED_AGENT_NAMES.contains(&agent.name.as_str()) {
+            return Err(AppSettingsError::InvalidAgent(format!(
+                "Agent name '{}' is reserved",
+                agent.name
+            )));
+        }
+        if agent.path.is_empty() {
+            return Err(AppSettingsError::InvalidAgent(
+                "Agent path is empty".to_string(),
+            ));
+        }
+        if agent.skills_path.is_empty() {
+            return Err(AppSettingsError::InvalidAgent(
+                "Agent skills_path is empty".to_string(),
+            ));
+        }
+
         if self
             .config
             .agents
@@ -375,6 +440,12 @@ impl AppSettingsManager {
 
         if self.config.agents.len() == original_len {
             return Err(AppSettingsError::AgentNotFound(name.to_string()));
+        }
+
+        // 清理 skill_states 中对该 agent 的引用：磁盘上的链接不动，由 scanner 自愈。
+        for entry in self.config.skill_states.values_mut() {
+            entry.open.retain(|s| s != name);
+            entry.sources.retain(|s| s != name);
         }
 
         Ok(())

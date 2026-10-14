@@ -1,77 +1,29 @@
+import type { AgentConfig } from '@/types';
+
 /**
- * 各 agent 的技能扫描目录映射。
+ * 计算某个 agent 的技能扫描目录（用于 Settings 展示）。
  *
- * 与 `src-tauri/src/scanner.rs::scan_all_skill_sources` 中的硬编码保持一致：
- * - 若该文件的扫描路径调整，请同步更新此处常量。
- * - 未列出的 agent（opencode）当前无专门的扫描路径。
+ * 与后端 `src-tauri/src/scanner.rs::collect_discoveries` 保持一致：
+ * - 主路径与每个 extra_path 都会拼上 skills_path（`{root}/{skills_path}`）。
+ * - cursor / claude 在 scanner.rs 中还有硬编码的插件目录额外扫描，这里同样列出。
  */
-const AGENT_SCAN_PATHS: Record<string, string[]> = {
-  claude: [
-    '~/.claude/skills',
-    '~/.claude/plugins/cache',
-  ],
-  cursor: [
-    '~/.cursor/skills',
-    '~/.cursor/skills-cursor',
-    '~/.cursor/plugins/cache/cursor-public',
-  ],
-  antigravity: [
-    '~/.gemini/skills',
-    '~/.gemini/config/skills',
-    '~/.antigravity/skills',
-  ],
-  codex: [
-    '~/.codex/skills',
-  ],
-  agents: [
-    '~/.agents/skills',
-    '~/.config/agents/skills',
-  ],
-  copilot: [
-    '~/.copilot/skills',
-  ],
-  workbuddy: [
-    '~/.workbuddy/skills',
-    '~/WorkBuddy/skills',
-  ],
-  zcode: [
-    '~/.zcode/skills',
-    '~/ZCodeProject/skills',
-  ],
-  openclaw: [
-    '~/.openclaw/skills',
-  ],
-  opencode: [
-    '~/.config/opencode/skills',
-    '~/.opencode/skills',
-  ],
-  kimi: [
-    '~/.kimi-code/skills',
-  ],
-  marscode: [
-    '~/.marscode/skills',
-    '~/.marscode/builtin_skills',
-  ],
-  openclaude: [
-    '~/.openclaude/skills',
-  ],
-  hermes: [
-    '~/.hermes/skills',
-  ],
-  grok: [
-    '~/.grok/skills',
-  ],
-  trae: [
-    '~/.trae/skills',
-    '~/.trae-cn/skills',
-  ],
-  qoder: [
-    '~/.qoder/skills',
-  ],
-  kiro: [
-    '~/.kiro/skills',
-  ],
+export const getAgentScanPaths = (agent: AgentConfig): string[] => {
+  if (!agent) return [];
+
+  const roots = [agent.path, ...(agent.extra_paths ?? [])].filter(Boolean);
+  const paths = roots.map((root) => joinScanPath(root, agent.skills_path));
+
+  if (agent.name === 'cursor') {
+    paths.push('~/.cursor/skills-cursor', '~/.cursor/plugins/cache/cursor-public');
+  } else if (agent.name === 'claude') {
+    paths.push('~/.claude/plugins/cache');
+  }
+
+  return Array.from(new Set(paths));
 };
 
-export const getAgentScanPaths = (name: string): string[] =>
-  AGENT_SCAN_PATHS[name] ?? [];
+const joinScanPath = (root: string, skillsPath: string): string => {
+  const normalizedRoot = root.trim().replace(/\\/g, '/').replace(/\/+$/, '');
+  const normalizedSkills = skillsPath.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  return normalizedSkills ? `${normalizedRoot}/${normalizedSkills}` : normalizedRoot;
+};

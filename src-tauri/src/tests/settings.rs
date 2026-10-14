@@ -181,4 +181,151 @@ mod tests {
         let manager2 = crate::settings::AppSettingsManager::load_or_create(&config_path).unwrap();
         assert_eq!(manager2.get_config().linking_strategy, LinkStrategy::Copy);
     }
+
+    #[test]
+    fn test_presets_include_pi_and_omp() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+
+        let manager = crate::settings::AppSettingsManager::load_or_create(&config_path).unwrap();
+        let config = manager.get_config();
+
+        let pi = config
+            .agents
+            .iter()
+            .find(|agent| agent.name == "pi")
+            .expect("pi preset missing");
+        assert_eq!(pi.path, "~/.pi");
+        assert_eq!(pi.skills_path, "agent/skills");
+
+        let omp = config
+            .agents
+            .iter()
+            .find(|agent| agent.name == "omp")
+            .expect("omp preset missing");
+        assert_eq!(omp.path, "~/.omp");
+        assert_eq!(omp.skills_path, "agent/skills");
+    }
+
+    #[test]
+    fn test_legacy_config_gets_new_presets_on_load() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+
+        // 旧版本 config：不含 pi/omp，加载后应自动补上
+        let legacy = serde_json::json!({
+            "schema_version": CURRENT_SCHEMA_VERSION,
+            "linking_strategy": "symlink",
+            "agents": [
+                { "name": "claude", "display_name": "Claude Code", "path": "~/.claude",
+                  "skills_path": "skills", "enabled": true, "detected": false }
+            ],
+            "skill_states": {},
+            "language": "zh",
+            "skill_hide_prefixes": []
+        });
+        std::fs::write(&config_path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
+
+        let manager = crate::settings::AppSettingsManager::load_or_create(&config_path).unwrap();
+        let names: Vec<&str> = manager
+            .get_config()
+            .agents
+            .iter()
+            .map(|a| a.name.as_str())
+            .collect();
+        assert!(names.contains(&"pi"));
+        assert!(names.contains(&"omp"));
+    }
+
+    #[test]
+    fn test_add_agent_normalizes_name_and_skills_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+
+        let mut manager =
+            crate::settings::AppSettingsManager::load_or_create(&config_path).unwrap();
+
+        let mut agent = test_agent();
+        agent.name = "  My Custom Agent! " .to_string();
+        agent.skills_path = "\\Nested/Dir/\\".to_string();
+        agent.path = "  ~/.test  ".to_string();
+        manager.add_agent(agent).unwrap();
+
+        let added = manager
+            .get_config()
+            .agents
+            .iter()
+            .find(|a| a.name == "my-custom-agent")
+            .expect("normalized agent missing");
+        assert_eq!(added.skills_path, "Nested/Dir");
+        assert_eq!(added.path, "~/.test");
+    }
+
+    #[test]
+    fn test_add_agent_rejects_invalid_input() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+
+        let mut manager =
+            crate::settings::AppSettingsManager::load_or_create(&config_path).unwrap();
+
+        // 保留字
+        for reserved in ["global", "all", "GLOBAL"] {
+            let mut agent = test_agent();
+            agent.name = reserved.to_string();
+            assert!(manager.add_agent(agent).is_err(), "{reserved} should be rejected");
+        }
+
+        // 非法字符全被过滤后为空
+        let mut agent = test_agent();
+        agent.name = "!!!".to_string();
+        assert!(manager.add_agent(agent).is_err());
+
+        // 空 path / 空 skills_path
+        let mut agent = test_agent();
+        agent.path = "   ".to_string();
+        assert!(manager.add_agent(agent).is_err());
+
+        let mut agent = test_agent();
+        agent.skills_path = " / ".to_string();
+        assert!(manager.add_agent(agent).is_err());
+
+        // 与内置 preset 重名
+        let mut agent = test_agent();
+        agent.name = "claude".to_string();
+        assert!(manager.add_agent(agent).is_err());
+    }
+
+    #[test]
+    fn test_remove_agent_cleans_skill_states() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+
+        let mut manager =
+            crate::settings::AppSettingsManager::load_or_create(&config_path).unwrap();
+        manager.add_agent(test_agent()).unwrap();
+
+        {
+            let config = manager.get_config_mut();
+            config.skill_states.insert(
+                "demo-skill".to_string(),
+                crate::models::SkillEntry {
+                    sources: vec!["global".to_string(), "test-agent".to_string()],
+                    primary: "global".to_string(),
+                    open: vec!["test-agent".to_string()],
+                },
+            );
+        }
+
+        manager.remove_agent("test-agent").unwrap();
+
+        let entry = manager
+            .get_config()
+            .skill_states
+            .get("demo-skill")
+            .expect("skill entry should survive");
+        assert!(!entry.sources.iter().any(|s| s == "test-agent"));
+        assert!(!entry.open.iter().any(|s| s == "test-agent"));
+        assert!(entry.sources.iter().any(|s| s == "global"));
+    }
 }

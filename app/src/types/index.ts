@@ -61,6 +61,7 @@ export interface AgentConfig {
   skills_path: string;           // Relative skills path (e.g., "skills" under agent home)
   enabled: boolean;              // Whether agent is active
   detected: boolean;             // Whether agent is installed on system
+  extra_paths?: string[];        // Additional scan roots (relative to agent home or absolute)
 }
 
 // Linking strategy: how to "link" skills from Skills Manager root into agent directories.

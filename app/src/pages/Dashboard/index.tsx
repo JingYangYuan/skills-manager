@@ -43,9 +43,16 @@ if (typeof document !== 'undefined' && !document.getElementById('dashboard-drawe
   document.head.appendChild(style);
 }
 
+/**
+ * 重启后恢复来源筛选。自定义 agent 在首帧可能尚未注册到运行时元信息表，
+ * 此时保留原始值，等后端 agent 列表到达后再补一次校验。
+ */
+let rawPersistedSource: string | null = null;
+
 function readPersistedSelectedSource(): string {
   try {
     const src = sessionStorage.getItem(SESSION_STORAGE_KEYS.dashboardSelectedSourceV2);
+    rawPersistedSource = src;
     return src && isSource(src) ? src : SOURCE.All;
   } catch {
     return SOURCE.All;
@@ -106,6 +113,16 @@ function Dashboard({
   // Custom hooks
   const { skills, setSkills, agents: rawAgents, loading, error, loadSkills, refreshSkills, loadAgents } = useSkillData();
   const agents = useMemo(() => sortAgentsByStoredOrder(rawAgents), [rawAgents]);
+
+  // 后端 agent 列表就绪后，补一次来源恢复（自定义 agent 需要先注册才能通过校验）
+  useEffect(() => {
+    if (rawAgents.length === 0) return;
+    const raw = rawPersistedSource;
+    rawPersistedSource = null;
+    if (raw && raw !== selectedSource && isSource(raw)) {
+      setSelectedSource(raw);
+    }
+  }, [rawAgents, selectedSource]);
 
   // 只展示"可见 agent"的技能：排除 sources 全属于隐藏 agent 的技能
   const hiddenAgents = useHiddenAgents();
