@@ -16,6 +16,8 @@ tauri-build = { version = "2.0", features = [] }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
 tauri-plugin-fs = "2"
+# 注意：npm 的 @tauri-apps/plugin-dialog 必须与 tauri-plugin-dialog（crate）的 major/minor 一致，
+# 否则 tauri CLI 会报 "Found version mismatched Tauri packages" 并中止构建。
 tauri-plugin-dialog = "2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
