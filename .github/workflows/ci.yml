@@ -70,5 +70,15 @@ jobs:
       - name: Build frontend
         run: pnpm run build
 
+      # 注意：新增依赖（tauri-plugin-dialog）后 Cargo.lock 需要由 cargo 重新解析，
+      # 因此这里暂时不带 --locked。等 CI 产出的锁文件提交回仓库后，改回 `--locked`。
       - name: Cargo test
-        run: cargo test --manifest-path=src-tauri/Cargo.toml --locked
+        run: cargo test --manifest-path=src-tauri/Cargo.toml
+
+      # 临时步骤：取回 CI 生成的 Cargo.lock（为上面的步骤服务，同步完成后可删除）
+      - name: Upload Cargo.lock
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cargo.lock
+          path: src-tauri/Cargo.lock
