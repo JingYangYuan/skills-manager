@@ -36,12 +36,7 @@ jobs:
   rust-tests:
     name: Rust tests (windows-latest)
     runs-on: windows-latest
-    # 如需同时验证 macOS：把上面一行换成
-    #   strategy:
-    #     fail-fast: false
-    #     matrix:
-    #       os: [windows-latest, macos-latest]
-    #   runs-on: ${{ matrix.os }}
+    # 平台差异（#[cfg(windows)] 符号被跨平台调用等）由 rust-check-macos 检查
     steps:
       - uses: actions/checkout@v4
 
@@ -73,3 +68,40 @@ jobs:
       # Cargo.lock 已随新增依赖（tauri-plugin-dialog）同步，用 --locked 保证可复现
       - name: Cargo test
         run: cargo test --manifest-path=src-tauri/Cargo.toml --locked
+
+  rust-check-macos:
+    name: Rust check (macos-latest)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # tauri 的 build.rs 需要 frontendDist（../dist）存在，否则编译失败
+      - name: Build frontend
+        run: pnpm run build
+
+      # 只编译不运行：Windows 专用 job 无法发现只在 macOS 暴露的编译错误
+      # （例如 #[cfg(windows)] 限定的函数被跨平台代码无条件调用 → E0425）。
+      # --all-targets 连测试代码一起检查。
+      - name: Cargo check (macOS)
+        run: cargo check --manifest-path=src-tauri/Cargo.toml --locked --all-targets
