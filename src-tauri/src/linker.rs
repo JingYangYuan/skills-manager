@@ -108,14 +108,16 @@ fn path_to_wide_nul(path: &Path) -> Vec<u16> {
 }
 
 /// 去除 `canonicalize` 产生的 `\\?\` 扩展路径前缀（CreateSymbolicLinkW 对它支持不一致）。
-#[cfg(windows)]
 fn strip_extended_prefix(p: &Path) -> PathBuf {
-    let s = p.to_string_lossy();
-    if s.starts_with(r"\\?\") {
-        PathBuf::from(&s[4..])
-    } else {
-        p.to_path_buf()
+    #[cfg(windows)]
+    {
+        let s = p.to_string_lossy();
+        if s.starts_with(r"\\?\") {
+            return PathBuf::from(&s[4..]);
+        }
     }
+
+    p.to_path_buf()
 }
 
 /// 使用与「开发人员模式」兼容的标志创建符号链接；失败时再回退到 `std` 实现。
