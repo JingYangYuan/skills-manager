@@ -19,7 +19,13 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(target.exists());
-        assert_eq!(target.read_link().unwrap(), source);
+        // Windows 上 create_symlink 会先把源路径规范化（8.3 短路径 → 长路径），
+        // 因此比较规范化后的路径，而不是字面量
+        let linked_target = target.read_link().unwrap();
+        assert_eq!(
+            fs::canonicalize(&linked_target).unwrap(),
+            fs::canonicalize(&source).unwrap()
+        );
 
         // 验证内容一致
         let content = fs::read_to_string(&target).unwrap();
