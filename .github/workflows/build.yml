@@ -186,7 +186,7 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           name: Skills Manager ${{ env.TAG_NAME }}
           body: See the assets to download and install this version.
-          draft: true
+          draft: false
           prerelease: false
           files: release-assets/*
         env:
