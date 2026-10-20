@@ -89,6 +89,7 @@
     "loadingMore": "加载更多... ({{current}}/{{total}})"
   },
   "dashboard": {
+    "viewDetail": "查看详情",
     "title": "已安装",
     "search": {
       "placeholder": "搜索已安装...",
@@ -608,6 +609,7 @@
       }
   },
   "common": {
+    "processing": "处理中...",
     "loading": "加载中...",
     "error": "错误",
     "success": "成功",

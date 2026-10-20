@@ -33,6 +33,10 @@ jobs:
       - name: Type-check and build
         run: pnpm run build
 
+      # 新增文案必须四语言齐全，否则界面会直接渲染出 key
+      - name: Check i18n keys
+        run: node scripts/check-i18n-keys.mjs
+
   rust-tests:
     name: Rust tests (windows-latest)
     runs-on: windows-latest

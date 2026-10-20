@@ -88,6 +88,7 @@
     "downloadLogTitle": "下載歷史"
   },
   "dashboard": {
+    "viewDetail": "檢視詳情",
     "title": "已安裝",
     "search": {
       "placeholder": "搜尋已安裝...",
@@ -608,6 +609,7 @@
       }
   },
   "common": {
+    "processing": "處理中...",
     "loading": "載入中...",
     "error": "錯誤",
     "success": "成功",

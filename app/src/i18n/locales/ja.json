@@ -85,6 +85,7 @@
     }
   },
   "dashboard": {
+    "viewDetail": "詳細を表示",
     "title": "インストール済み",
     "search": {
       "placeholder": "インストール済みを検索...",
@@ -590,6 +591,7 @@
       }
   },
   "common": {
+    "processing": "処理中...",
     "loading": "読み込み中...",
     "error": "エラー",
     "success": "成功",

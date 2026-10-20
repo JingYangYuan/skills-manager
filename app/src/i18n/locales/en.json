@@ -86,6 +86,7 @@
     "loadingMore": "Loading more... ({{current}}/{{total}})"
   },
   "dashboard": {
+    "viewDetail": "View details",
     "title": "Installed",
     "search": {
       "placeholder": "Search installed...",
@@ -590,6 +591,7 @@
       }
   },
   "common": {
+    "processing": "Processing...",
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
