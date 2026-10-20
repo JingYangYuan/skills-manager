@@ -1,4 +1,4 @@
-use crate::linker::is_junction_or_symlink;
+use crate::linker::{agent_entry_state, is_junction_or_symlink, AgentEntryState};
 use crate::models::{pick_default_primary, AgentConfig, SkillEntry, SkillMetadata, SOURCE_GLOBAL};
 use regex::Regex;
 use std::collections::HashMap;
@@ -286,15 +286,44 @@ pub fn scan_and_merge(
     let agent_names: Vec<String> = agents.iter().map(|a| a.name.clone()).collect();
 
     // 1) 自愈：把物理副本位置同步进 skill_states
+    //
+    // 特别处理：如果某个 Agent 目录里的内容与中央库【完全一致】，说明它是旧版本
+    // 「链接失败降级为复制」留下的托管副本，而不是用户自己维护的原生技能。
+    // 这种条目必须继续算作「已开启（open）」，否则它会变成不可关闭的 native 来源，
+    // 用户就再也无法在界面上取消共享。
+    let mut managed_copies: HashMap<String, Vec<String>> = HashMap::new();
     for (id, group) in &by_id {
-        let entry = skill_states.entry(id.clone()).or_default();
+        let central_dir = group
+            .iter()
+            .find(|d| d.source == SOURCE_GLOBAL)
+            .map(|d| PathBuf::from(&d.path));
+
+        let mut real_sources: Vec<String> = Vec::new();
         for d in group {
-            entry.insert_source(&d.source);
+            if d.source != SOURCE_GLOBAL {
+                if let Some(central) = &central_dir {
+                    if agent_entry_state(central, Path::new(&d.path))
+                        == AgentEntryState::IdenticalCopy
+                    {
+                        managed_copies
+                            .entry(id.clone())
+                            .or_default()
+                            .push(d.source.clone());
+                        continue;
+                    }
+                }
+            }
+            real_sources.push(d.source.clone());
+        }
+
+        let entry = skill_states.entry(id.clone()).or_default();
+        for source in &real_sources {
+            entry.insert_source(source);
         }
         // 移除 sources 里已不存在物理副本的项
-        let existing: std::collections::HashSet<&str> =
-            group.iter().map(|d| d.source.as_str()).collect();
-        entry.sources.retain(|s| existing.contains(s.as_str()));
+        entry
+            .sources
+            .retain(|s| real_sources.iter().any(|r| r == s));
         entry.ensure_valid_primary();
         // 裁剪 open：只保留「已知 agent」且「非原生来源（sources 里已有物理副本）」的项，
         // 避免已删除/已移除的 agent 永远残留在状态里。
@@ -303,6 +332,15 @@ pub fn scan_and_merge(
         entry
             .open
             .retain(|a| agent_names.contains(a) && !native.contains(a.as_str()));
+
+        // 托管副本归位到 open，保证界面上的开关可继续操作
+        if let Some(copies) = managed_copies.get(id) {
+            for agent_name in copies {
+                if !native.contains(agent_name.as_str()) && !entry.open.contains(agent_name) {
+                    entry.open.push(agent_name.clone());
+                }
+            }
+        }
     }
 
     // 2) 删除孤儿：skill_states 里但本次扫描完全没发现物理副本的 id

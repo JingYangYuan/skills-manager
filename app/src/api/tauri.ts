@@ -4,6 +4,8 @@ import type { SkillMetadata, GitHubConfig, AgentConfig, AppConfig, SkillFileEntr
 /** 链接校准报告（对应后端 RepairReport） */
 export interface RepairReport {
   relinked: number;
+  /** 历史「链接降级为复制」的副本已就地转换成链接的数量 */
+  converted: number;
   removed: number;
   skipped: number;
   errors: string[];

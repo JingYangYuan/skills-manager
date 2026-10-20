@@ -577,11 +577,11 @@
       "enabledHint": "已开启，可对所有来源的技能执行删除操作",
       "warning": "开启高阶模式后，详情页面将出现删除按钮，可删除来自 Cursor、Claude 等 Agent 原生目录的技能。",
       "repairLinks": "校准技能链接",
-      "repairLinksHint": "按各技能的启用状态重建缺失的链接，并清理已停用却残留的链接；不会删除真实目录或用户自建副本。",
+      "repairLinksHint": "按各技能的启用状态重建缺失的链接，把历史遗留的重复副本原地转换成链接，并清理已停用却残留的链接；不会删除内容不同的真实目录。",
       "repairLinksAction": "开始校准",
       "repairLinksRunning": "校准中…",
-      "repairLinksDone": "校准完成：重建 {{relinked}} 个链接，清理 {{removed}} 个残留",
-      "repairLinksPartial": "校准完成，但有 {{failed}} 项失败：重建 {{relinked}}，清理 {{removed}}",
+      "repairLinksDone": "校准完成：重建 {{relinked}} 个链接，转换 {{converted}} 个副本，清理 {{removed}} 个残留",
+      "repairLinksPartial": "校准完成，但有 {{failed}} 项失败：重建 {{relinked}}，转换 {{converted}}，清理 {{removed}}",
       "repairLinksFailed": "校准失败"
     },
     "previewLocked": {

@@ -92,6 +92,7 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({
                   'warning',
                   t('settings.advanced.repairLinksPartial', {
                     relinked: report.relinked,
+                    converted: report.converted ?? 0,
                     removed: report.removed,
                     failed: report.errors.length,
                   }),
@@ -101,6 +102,7 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({
                   'success',
                   t('settings.advanced.repairLinksDone', {
                     relinked: report.relinked,
+                    converted: report.converted ?? 0,
                     removed: report.removed,
                   }),
                 );

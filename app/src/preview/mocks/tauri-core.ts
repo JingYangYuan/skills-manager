@@ -106,7 +106,7 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown | Prom
     return simulateLatency(undefined);
   },
 
-  repair_skill_links: () => simulateLatency({ relinked: 0, removed: 0, skipped: 0, errors: [] }),
+  repair_skill_links: () => simulateLatency({ relinked: 0, converted: 0, removed: 0, skipped: 0, errors: [] }),
 
   set_skill_primary: ({ skillId, newPrimary }) => {
     const sk = findSkill(String(skillId));

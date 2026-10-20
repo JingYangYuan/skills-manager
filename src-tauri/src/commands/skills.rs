@@ -178,6 +178,27 @@ pub(crate) async fn enable_skill_impl(
         if is_native(entry, &agent_config.name) {
             continue;
         }
+
+        // 历史版本「链接失败降级为复制」留下的副本：先在原地转成链接（失败可回滚），
+        // 否则下次扫描会把它当成原生目录，用户再也无法关闭共享。
+        if let Some(agent_dir) = agent_skill_path(agent_config, &skill.id) {
+            let central_dir = AppSettingsManager::get_skills_dir().join(&skill.id);
+            match crate::linker::convert_copy_to_link(&central_dir, &agent_dir) {
+                Ok(true) => {
+                    linked += 1;
+                    if !entry.open.iter().any(|n| n == &agent_config.name) {
+                        entry.open.push(agent_config.name.clone());
+                    }
+                    continue;
+                }
+                Ok(false) => {}
+                Err(e) => warn!(
+                    "Failed to convert duplicated copy for agent {}: {}",
+                    agent_config.name, e
+                ),
+            }
+        }
+
         match linker.link_skill_to_agent(&skill, agent_config, &skills_base) {
             Ok(_) => {
                 linked += 1;
@@ -258,6 +279,27 @@ pub(crate) async fn disable_skill_impl(
     let mut unlinked = 0usize;
     let mut failures: Vec<String> = Vec::new();
     for agent_config in &target_agents {
+        // 历史副本：内容与中央库完全一致的真实目录，直接删掉即等于断开共享
+        // （绝不能删内容不同的原生版本，那属于用户自己的技能）
+        if let Some(agent_dir) = agent_skill_path(agent_config, &skill.id) {
+            let central_dir = AppSettingsManager::get_skills_dir().join(&skill.id);
+            if crate::linker::agent_entry_state(&central_dir, &agent_dir)
+                == crate::linker::AgentEntryState::IdenticalCopy
+            {
+                match std::fs::remove_dir_all(&agent_dir) {
+                    Ok(()) => {
+                        unlinked += 1;
+                        entry.open.retain(|n| n != &agent_config.name);
+                        continue;
+                    }
+                    Err(e) => warn!(
+                        "Failed to remove duplicated copy {:?}: {}",
+                        agent_dir, e
+                    ),
+                }
+            }
+        }
+
         if is_native(entry, &agent_config.name) {
             warn!(
                 "Skipping disable for native agent '{}' on skill '{}'",
@@ -603,12 +645,26 @@ pub(crate) async fn delete_skill_impl(
         let state_snapshot = config.skill_states.get(&skill_id).cloned();
 
         let to_delete: Vec<(String, String)> = if let Some(src) = source.as_ref() {
-            skill
+            let mut matched: Vec<(String, String)> = skill
                 .source_paths
                 .iter()
                 .filter(|(s, _)| s.as_str() == src.as_str())
                 .map(|(s, p)| (s.clone(), p.clone()))
-                .collect()
+                .collect();
+            // 源已退化为「托管副本」（扫描时不再算 sources）时，按 Agent 目录定位它
+            if matched.is_empty() {
+                if let Some(agent_config) = config.agents.iter().find(|a| &a.name == src) {
+                    if let Some(path) = agent_skill_path(agent_config, &skill_id) {
+                        let central = AppSettingsManager::get_skills_dir().join(&skill_id);
+                        if crate::linker::agent_entry_state(&central, &path)
+                            == crate::linker::AgentEntryState::IdenticalCopy
+                        {
+                            matched.push((src.clone(), path.to_string_lossy().to_string()));
+                        }
+                    }
+                }
+            }
+            matched
         } else {
             skill
                 .source_paths
@@ -647,6 +703,10 @@ pub(crate) async fn delete_skill_impl(
     // 无论删除哪个源，都 unlink 所有 open agent + 把物理副本移入回收站（可恢复）
     let skill_id_clone = skill_id.clone();
     let trash_root = trash::trash_root();
+    let central_dir = AppSettingsManager::get_skills_dir().join(&skill_id);
+    // 整体删除或删除 central 时，历史「链接降级为复制」留下的副本也要一并清理，
+    // 否则中央库没了、副本留下来，下次扫描就变成无法控制的原生技能。
+    let include_managed_copies = source.as_deref().map(|s| s == SOURCE_GLOBAL).unwrap_or(true);
     let trash_id = tokio::task::spawn_blocking(move || -> Result<Option<String>, String> {
         let linker = LinkManager::new(linking_strategy);
 
@@ -661,14 +721,30 @@ pub(crate) async fn delete_skill_impl(
             }
         }
 
-        if source_paths_to_delete.is_empty() {
-            return Ok(None);
-        }
-
-        let dirs: Vec<(String, PathBuf)> = source_paths_to_delete
+        let mut dirs: Vec<(String, PathBuf)> = source_paths_to_delete
             .iter()
             .map(|(src, path)| (src.clone(), PathBuf::from(path)))
             .collect();
+
+        if include_managed_copies {
+            for agent_name in &open_agents {
+                let Some(agent_config) = agents.iter().find(|a| &a.name == agent_name) else {
+                    continue;
+                };
+                let Some(path) = agent_skill_path(agent_config, &skill_id_clone) else {
+                    continue;
+                };
+                if crate::linker::agent_entry_state(&central_dir, &path)
+                    == crate::linker::AgentEntryState::IdenticalCopy
+                {
+                    dirs.push((agent_name.clone(), path));
+                }
+            }
+        }
+
+        if dirs.is_empty() {
+            return Ok(None);
+        }
 
         match trash::move_to_trash_in(
             &trash_root,
@@ -987,6 +1063,8 @@ fn enable_skill_internal(
 pub struct RepairReport {
     /// 重建的缺失链接数
     pub relinked: u32,
+    /// 历史「链接降级为复制」留下的重复副本 → 已原地转成链接的数量
+    pub converted: u32,
     /// 清除的多余链接数
     pub removed: u32,
     /// 已经正确、无需处理的项数
@@ -1037,11 +1115,27 @@ pub async fn repair_skill_links(state: State<'_, AppState>) -> Result<RepairRepo
         };
 
         // 1) 补齐 open 中缺失的链接
+        let central_dir = AppSettingsManager::get_skills_dir().join(&skill.id);
         for agent_name in entry.open.iter() {
             let Some(agent_config) = config.agents.iter().find(|a| &a.name == agent_name) else {
                 report.skipped += 1;
                 continue;
             };
+
+            // 0) 真实副本（内容与中央库一致）→ 转成链接，避免它继续被当成原生目录
+            if let Some(path) = agent_skill_path(agent_config, &skill.id) {
+                match crate::linker::convert_copy_to_link(&central_dir, &path) {
+                    Ok(true) => {
+                        report.converted += 1;
+                        continue;
+                    }
+                    Ok(false) => {}
+                    Err(e) => report
+                        .errors
+                        .push(format!("{} → {}: {}", skill.id, agent_name, e)),
+                }
+            }
+
             if is_native(&entry, agent_name) {
                 report.skipped += 1;
                 continue;
@@ -1090,8 +1184,9 @@ pub async fn repair_skill_links(state: State<'_, AppState>) -> Result<RepairRepo
     invalidate_skills_cache(&state);
 
     info!(
-        "Repair done: relinked={}, removed={}, skipped={}, errors={}",
+        "Repair done: relinked={}, converted={}, removed={}, skipped={}, errors={}",
         report.relinked,
+        report.converted,
         report.removed,
         report.skipped,
         report.errors.len()

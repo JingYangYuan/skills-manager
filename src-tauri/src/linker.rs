@@ -22,6 +22,29 @@ pub enum LinkResult {
     Copy,
 }
 
+/// 把链接相关诊断写入 `~/.skills-manager/linker.log`（GUI 进程没有控制台，
+/// eprintln 看不到；链接降级为复制时必须留下可追溯的原因）。
+pub(crate) fn linker_log(message: &str) {
+    use std::io::Write;
+
+    let Some(home) = dirs::home_dir() else {
+        return;
+    };
+    let dir = home.join(".skills-manager");
+    let path = dir.join("linker.log");
+    let _ = fs::create_dir_all(&dir);
+    if fs::metadata(&path).map(|m| m.len() > 256 * 1024).unwrap_or(false) {
+        let _ = fs::remove_file(&path);
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let _ = writeln!(file, "[{}] {}", stamp, message);
+    }
+}
+
 /// 创建符号链接
 #[cfg(unix)]
 pub fn create_symlink(source: &Path, target: &Path) -> Result<LinkResult, LinkerError> {
@@ -95,6 +118,29 @@ extern "system" {
         lp_target_file_name: *const u16,
         dw_flags: u32,
     ) -> u8;
+
+    fn CreateFileW(
+        lp_file_name: *const u16,
+        dw_desired_access: u32,
+        dw_share_mode: u32,
+        lp_security_attributes: *mut core::ffi::c_void,
+        dw_creation_disposition: u32,
+        dw_flags_and_attributes: u32,
+        h_template_file: *mut core::ffi::c_void,
+    ) -> isize;
+
+    fn DeviceIoControl(
+        h_device: isize,
+        dw_io_control_code: u32,
+        lp_in_buffer: *const core::ffi::c_void,
+        n_in_buffer_size: u32,
+        lp_out_buffer: *mut core::ffi::c_void,
+        n_out_buffer_size: u32,
+        lp_bytes_returned: *mut u32,
+        lp_overlapped: *mut core::ffi::c_void,
+    ) -> i32;
+
+    fn CloseHandle(h_object: isize) -> i32;
 }
 
 /// `link` 为新符号链接路径，`point_to` 为链接目标（须存在）。
@@ -160,19 +206,95 @@ fn create_junction(link: &Path, point_to: &Path) -> std::io::Result<()> {
     }
 }
 
+/// 直接用 `FSCTL_SET_REPARSE_POINT` 创建 NTFS Junction。
+/// 不依赖 cmd.exe，也不依赖「开发人员模式」；`link` 必须是已存在的空目录。
+#[cfg(windows)]
+fn create_junction_native(link: &Path, point_to: &Path) -> std::io::Result<()> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    const GENERIC_WRITE: u32 = 0x4000_0000;
+    const OPEN_EXISTING: u32 = 3;
+    const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+    const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+    const FSCTL_SET_REPARSE_POINT: u32 = 0x0009_00A4;
+    const IO_REPARSE_TAG_MOUNT_POINT: u32 = 0xA000_0003;
+
+    let target = strip_extended_prefix(point_to);
+    let target_str = target.to_string_lossy().to_string();
+    let substitute = format!("\\??\\{}", target_str);
+
+    let substitute_w: Vec<u16> = OsStr::new(&substitute).encode_wide().collect();
+    let print_w: Vec<u16> = OsStr::new(&target_str).encode_wide().collect();
+
+    // REPARSE_DATA_BUFFER: ULONG tag | USHORT data_len | USHORT reserved |
+    //   USHORT sub_off | USHORT sub_len | USHORT print_off | USHORT print_len | WCHAR path_buffer[]
+    let path_buffer_bytes = (substitute_w.len() + print_w.len()) * 2;
+    let reparse_data_len = 8 + path_buffer_bytes;
+    let mut buffer = vec![0u8; 8 + reparse_data_len];
+    buffer[0..4].copy_from_slice(&IO_REPARSE_TAG_MOUNT_POINT.to_le_bytes());
+    buffer[4..6].copy_from_slice(&(reparse_data_len as u16).to_le_bytes());
+    // buffer[6..8] reserved = 0
+    buffer[8..10].copy_from_slice(&0u16.to_le_bytes());
+    buffer[10..12].copy_from_slice(&((substitute_w.len() * 2) as u16).to_le_bytes());
+    buffer[12..14].copy_from_slice(&((substitute_w.len() * 2) as u16).to_le_bytes());
+    buffer[14..16].copy_from_slice(&((print_w.len() * 2) as u16).to_le_bytes());
+
+    let mut offset = 16usize;
+    for unit in substitute_w.iter().chain(print_w.iter()) {
+        if offset + 2 > buffer.len() {
+            break;
+        }
+        buffer[offset..offset + 2].copy_from_slice(&unit.to_le_bytes());
+        offset += 2;
+    }
+
+    let link_wide = path_to_wide_nul(link);
+    let handle = unsafe {
+        CreateFileW(
+            link_wide.as_ptr(),
+            GENERIC_WRITE,
+            0,
+            core::ptr::null_mut(),
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+            core::ptr::null_mut(),
+        )
+    };
+    if handle == -1 {
+        return Err(std::io::Error::last_os_error());
+    }
+
+    let mut returned = 0u32;
+    let ok = unsafe {
+        DeviceIoControl(
+            handle,
+            FSCTL_SET_REPARSE_POINT,
+            buffer.as_ptr() as *const core::ffi::c_void,
+            buffer.len() as u32,
+            core::ptr::null_mut(),
+            0,
+            &mut returned,
+            core::ptr::null_mut(),
+        )
+    };
+    let error = std::io::Error::last_os_error();
+    unsafe {
+        CloseHandle(handle);
+    }
+    if ok == 0 {
+        Err(error)
+    } else {
+        Ok(())
+    }
+}
+
 /// 创建符号链接 (Windows)
 /// 优先级：Junction（无需权限） > Symlink（需权限） > 返回错误（由外层 fallback 到 Copy）
 #[cfg(windows)]
 pub fn create_symlink(source: &Path, target: &Path) -> Result<LinkResult, LinkerError> {
-    eprintln!("=== CREATE_SYMLINK DEBUG (Windows) ===");
-    eprintln!("Source path: {:?}", source);
-    eprintln!("Source exists: {}", source.exists());
-    eprintln!("Source is_dir: {}", source.is_dir());
-    eprintln!("Target path: {:?}", target);
-    eprintln!("Target exists: {}", target.exists());
-
     if !source.exists() {
-        eprintln!("ERROR: Source path does not exist!");
+        linker_log(&format!("source missing: {:?}", source));
         return Err(LinkerError::LinkFailed(format!(
             "Source path does not exist: {:?}",
             source
@@ -181,71 +303,101 @@ pub fn create_symlink(source: &Path, target: &Path) -> Result<LinkResult, Linker
 
     if let Some(parent) = target.parent() {
         if !parent.exists() {
-            eprintln!("Creating parent directory: {:?}", parent);
             fs::create_dir_all(parent)?;
         }
     }
 
     if target.exists() {
-        eprintln!("Target already exists, removing...");
         if target.is_dir() {
             fs::remove_dir_all(target)?;
         } else {
             fs::remove_file(target)?;
         }
-        eprintln!("Old target removed");
     }
 
     let source_abs = strip_extended_prefix(&fs::canonicalize(source).map_err(LinkerError::Io)?);
-    eprintln!("Source absolute (cleaned): {:?}", source_abs);
 
     if source.is_dir() {
-        // 1) 优先用 NTFS Junction — 无需任何特权
-        eprintln!("Trying NTFS Junction (mklink /J) ...");
+        // 依次尝试三种「真链接」实现，每一种都校验落盘结果：
+        //   1) 原生 FSCTL_SET_REPARSE_POINT（不依赖 cmd.exe / 开发人员模式）
+        //   2) cmd /C mklink /J
+        //   3) CreateSymbolicLinkW / std::symlink_dir
+        // 全部失败才返回错误（外层才会降级为复制），并把原因写进 linker.log。
+        let mut reasons: Vec<String> = Vec::new();
+
+        // 1) 原生 junction（要求目标已经是空目录）
+        match fs::create_dir_all(target) {
+            Ok(()) => match create_junction_native(target, &source_abs) {
+                Ok(()) if is_junction_or_symlink(target) => {
+                    linker_log(&format!(
+                        "junction(native) ok: {:?} -> {:?}",
+                        target, source_abs
+                    ));
+                    return Ok(LinkResult::Symlink);
+                }
+                Ok(()) => reasons.push("native junction: 创建后校验失败".to_string()),
+                Err(e) => reasons.push(format!("native junction: {}", e)),
+            },
+            Err(e) => reasons.push(format!("native junction: 无法创建目标目录: {}", e)),
+        }
+        let _ = fs::remove_dir(target);
+
+        // 2) mklink /J
         match create_junction(target, &source_abs) {
-            Ok(()) => {
-                eprintln!("✅ NTFS Junction created successfully");
-                eprintln!("=== END CREATE_SYMLINK DEBUG ===");
+            Ok(()) if is_junction_or_symlink(target) => {
+                linker_log(&format!("junction(mklink) ok: {:?} -> {:?}", target, source_abs));
                 return Ok(LinkResult::Symlink);
             }
-            Err(e) => {
-                eprintln!("❌ Junction failed: {}", e);
-            }
+            Ok(()) => reasons.push("mklink /J: 创建后校验失败".to_string()),
+            Err(e) => reasons.push(format!("mklink /J: {}", e)),
         }
+        let _ = fs::remove_dir(target);
 
-        // 2) 再尝试 symlink（需要开发人员模式或管理员权限）
+        // 3) symlink（需要开发人员模式或管理员权限）
         let flags_priv = SYMLINK_FLAG_DIRECTORY | SYMLINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
-        eprintln!("Trying CreateSymbolicLinkW (flags=0x{:x}) ...", flags_priv);
-        match create_symlink_windows_api(target, &source_abs, flags_priv) {
-            Ok(()) => {
-                eprintln!("✅ Symlink created via CreateSymbolicLinkW");
-            }
-            Err(e) => {
-                eprintln!(
-                    "❌ CreateSymbolicLinkW failed: {} (os error {:?})",
-                    e,
-                    e.raw_os_error()
-                );
-                eprintln!("Trying std::os::windows::fs::symlink_dir ...");
-                std::os::windows::fs::symlink_dir(&source_abs, target).map_err(LinkerError::Io)?;
-                eprintln!("✅ std::symlink_dir succeeded");
-            }
+        if create_symlink_windows_api(target, &source_abs, flags_priv).is_ok()
+            && is_junction_or_symlink(target)
+        {
+            linker_log(&format!(
+                "symlink(CreateSymbolicLinkW) ok: {:?} -> {:?}",
+                target, source_abs
+            ));
+            return Ok(LinkResult::Symlink);
         }
+        reasons.push("CreateSymbolicLinkW: 失败或未生成链接".to_string());
+        let _ = fs::remove_file(target);
+        let _ = fs::remove_dir(target);
+
+        if std::os::windows::fs::symlink_dir(&source_abs, target).is_ok()
+            && is_junction_or_symlink(target)
+        {
+            linker_log(&format!(
+                "symlink(std) ok: {:?} -> {:?}",
+                target, source_abs
+            ));
+            return Ok(LinkResult::Symlink);
+        }
+        reasons.push("std::symlink_dir: 失败或未生成链接".to_string());
+
+        linker_log(&format!(
+            "create_symlink FAILED: {:?} -> {:?} | {}",
+            target,
+            source_abs,
+            reasons.join(" ; ")
+        ));
+        return Err(LinkerError::LinkFailed(format!(
+            "无法创建链接: {}",
+            reasons.join("; ")
+        )));
     } else {
         // 文件级 symlink
         let flags_file = SYMLINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
-        eprintln!(
-            "Trying CreateSymbolicLinkW for file (flags=0x{:x}) ...",
-            flags_file
-        );
         if let Err(e) = create_symlink_windows_api(target, &source_abs, flags_file) {
-            eprintln!("❌ file symlink failed: {} — trying std::symlink_file", e);
+            linker_log(&format!("file symlink failed ({}), trying std::symlink_file", e));
             std::os::windows::fs::symlink_file(&source_abs, target).map_err(LinkerError::Io)?;
         }
-        eprintln!("✅ File symlink created");
     }
 
-    eprintln!("=== END CREATE_SYMLINK DEBUG ===");
     Ok(LinkResult::Symlink)
 }
 
@@ -626,7 +778,11 @@ impl LinkManager {
                     }
                     Err(e) => {
                         eprintln!("Symlink failed with error: {}", e);
-                        // 符号链接失败，降级到复制
+                        // 符号链接失败，降级到复制（GUI 无控制台，必须落盘记录）
+                        linker_log(&format!(
+                            "FALLBACK TO COPY: skill={} agent={} target={:?} reason={}",
+                            skill.id, agent.name, skill_target, e
+                        ));
                         eprintln!("Falling back to copy strategy for {}", skill.id);
                         let copy_result = create_copy(&link_source, &skill_target);
                         match &copy_result {
@@ -720,5 +876,155 @@ impl LinkManager {
         }
 
         Ok(results)
+    }
+}
+
+// ---------- 副本识别与转换（修复历史「链接降级为复制」留下的脏数据） ----------
+
+/// 某个技能在某个 Agent 目录里的落地形态。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgentEntryState {
+    /// 不存在
+    Missing,
+    /// 是链接（junction / symlink）
+    Link,
+    /// 真实目录，但内容与中央库完全一致 → 属于软件托管的副本，可以安全替换成链接
+    IdenticalCopy,
+    /// 真实目录且内容与中央库不同 → 用户自己维护的原生版本，不能动
+    DifferentCopy,
+}
+
+/// 判定 Agent 目录下的条目形态。
+pub fn agent_entry_state(central_skill: &Path, agent_skill: &Path) -> AgentEntryState {
+    if is_junction_or_symlink(agent_skill) {
+        return AgentEntryState::Link;
+    }
+    if !agent_skill.is_dir() {
+        return AgentEntryState::Missing;
+    }
+    if !central_skill.is_dir() {
+        return AgentEntryState::DifferentCopy;
+    }
+    if dirs_identical(central_skill, agent_skill) {
+        AgentEntryState::IdenticalCopy
+    } else {
+        AgentEntryState::DifferentCopy
+    }
+}
+
+/// 收集目录下全部文件的「相对路径 → 大小」。
+/// 文件数超过 `max_files` 或读取失败时返回 None（宁可判成不同，也不误删）。
+fn file_fingerprint(
+    root: &Path,
+    max_files: usize,
+) -> Option<std::collections::BTreeMap<String, u64>> {
+    let mut map = std::collections::BTreeMap::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let entries = fs::read_dir(&dir).ok()?;
+        for entry in entries {
+            let entry = entry.ok()?;
+            let file_type = entry.file_type().ok()?;
+            let path = entry.path();
+            if file_type.is_symlink() {
+                continue;
+            }
+            if file_type.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            let rel = path
+                .strip_prefix(root)
+                .ok()?
+                .to_string_lossy()
+                .replace('\\', "/");
+            if map.len() >= max_files {
+                return None;
+            }
+            map.insert(rel, entry.metadata().ok()?.len());
+        }
+    }
+    Some(map)
+}
+
+/// 有界地比较两个目录的内容：先比「相对路径集合 + 文件大小」，
+/// 再对 ≤ 64KB 的文件逐字节校验，避免仅凭大小误判。
+pub fn dirs_identical(a: &Path, b: &Path) -> bool {
+    const MAX_FILES: usize = 200;
+    const MAX_COMPARE_BYTES: u64 = 64 * 1024;
+
+    let Some(left) = file_fingerprint(a, MAX_FILES) else {
+        return false;
+    };
+    let Some(right) = file_fingerprint(b, MAX_FILES) else {
+        return false;
+    };
+    if left.len() != right.len() {
+        return false;
+    }
+    for (rel, size) in &left {
+        match right.get(rel) {
+            Some(other) if other == size => {}
+            _ => return false,
+        }
+        if *size <= MAX_COMPARE_BYTES {
+            let (Ok(a_bytes), Ok(b_bytes)) = (fs::read(a.join(rel)), fs::read(b.join(rel))) else {
+                return false;
+            };
+            if a_bytes != b_bytes {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// 删除一个路径（目录链接用 remove_dir，不跟随链接内容）
+fn remove_path(path: &Path) -> std::io::Result<()> {
+    if !path.exists() && !is_junction_or_symlink(path) {
+        return Ok(());
+    }
+    if is_junction_or_symlink(path) {
+        fs::remove_dir(path).or_else(|_| fs::remove_file(path))
+    } else if path.is_dir() {
+        fs::remove_dir_all(path)
+    } else {
+        fs::remove_file(path)
+    }
+}
+
+/// 把「与中央库完全一致的真实副本」替换成链接。
+/// 返回 Ok(true) = 已转换，Ok(false) = 无需/不能转换（已是链接、内容不同、不存在）。
+/// 转换前先把副本改名为临时目录，链接失败时原样回滚，不会丢数据。
+pub fn convert_copy_to_link(central_skill: &Path, agent_skill: &Path) -> Result<bool, LinkerError> {
+    if agent_entry_state(central_skill, agent_skill) != AgentEntryState::IdenticalCopy {
+        return Ok(false);
+    }
+
+    let backup = agent_skill.with_file_name(format!(
+        ".{}.copy-backup",
+        agent_skill
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("skill")
+    ));
+    let _ = remove_path(&backup);
+    fs::rename(agent_skill, &backup)?;
+
+    match create_symlink(central_skill, agent_skill) {
+        Ok(_) => {
+            let _ = remove_path(&backup);
+            linker_log(&format!("converted copy -> link: {:?}", agent_skill));
+            Ok(true)
+        }
+        Err(e) => {
+            let _ = remove_path(agent_skill);
+            let _ = fs::rename(&backup, agent_skill);
+            linker_log(&format!(
+                "convert copy -> link FAILED, rolled back: {:?} | {}",
+                agent_skill, e
+            ));
+            Err(e)
+        }
     }
 }

@@ -558,11 +558,11 @@
       "enabledHint": "有効。すべてのソースのスキルを削除できます。",
       "warning": "詳細モードをオンにすると、詳細ページに削除ボタンが表示され、Cursor、Claude、その他のAgentのネイティブディレクトリからのスキルを含むすべてのスキルを削除できます。",
       "repairLinks": "スキルリンクを修復",
-      "repairLinksHint": "各スキルの有効状態に基づいて不足しているリンクを再構築し、無効化されたエージェントの残リンクを整理します。実ディレクトリやユーザー作成コピーは削除しません。",
+      "repairLinksHint": "各スキルの有効状態に基づいて不足しているリンクを再構築し、過去に生成された重複コピーをリンクに変換し、無効化されたエージェントの残リンクを整理します。内容が異なる実ディレクトリは削除しません。",
       "repairLinksAction": "修復を実行",
       "repairLinksRunning": "修復中…",
-      "repairLinksDone": "修復完了：{{relinked}} 件を再リンク、{{removed}} 件を整理",
-      "repairLinksPartial": "修復完了（{{failed}} 件失敗）：再リンク {{relinked}}、整理 {{removed}}",
+      "repairLinksDone": "修復完了：{{relinked}} 件を再リンク、{{converted}} 件のコピーをリンクに変換、{{removed}} 件を整理",
+      "repairLinksPartial": "修復完了（{{failed}} 件失敗）：再リンク {{relinked}}、コピー変換 {{converted}}、整理 {{removed}}",
       "repairLinksFailed": "修復に失敗しました"
     },
     "previewLocked": {
