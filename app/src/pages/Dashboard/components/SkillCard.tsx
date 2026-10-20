@@ -112,14 +112,14 @@ export const SkillCard: React.FC<SkillCardProps> = memo(({
             onSelect?.(skill.id);
           }}
           className={`absolute inset-0 z-40 flex items-start justify-end rounded-xl transition-colors ${checked
-            ? 'bg-[var(--accent-primary)]/10 ring-2 ring-inset ring-[var(--accent-primary)]'
+            ? 'bg-sky-500/10 ring-2 ring-inset ring-sky-500/70'
             : 'bg-transparent hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
           }`}
         >
           <span
-            className={`m-3 flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${checked
-              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white'
-              : 'border-[var(--border-color)] bg-white/90 dark:border-dark-border dark:bg-dark-bg-tertiary'
+            className={`m-3 flex h-5 w-5 items-center justify-center rounded-md border-2 shadow-sm transition-colors ${checked
+              ? 'border-sky-500 bg-sky-500 text-white'
+              : 'border-slate-300 bg-white/95 dark:border-dark-border dark:bg-dark-bg-tertiary'
             }`}
           >
             {checked && <Icon name="check" className="text-xs" />}

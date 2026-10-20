@@ -617,6 +617,15 @@ pub(crate) async fn delete_skill_impl(
                 .collect()
         };
 
+        // 指定来源却找不到物理副本 —— 不能静默成功，否则 UI 会显示「已删除」但磁盘上什么都没变
+        if source.is_some() && to_delete.is_empty() {
+            return Err(format!(
+                "技能 '{}' 未找到来源 {} 的物理副本",
+                skill_id,
+                source.clone().unwrap_or_default()
+            ));
+        }
+
         // 删除完成后还会剩哪些源？用来决定能不能清中央缓存。
         let will_have_global = match source.as_deref() {
             Some(SOURCE_GLOBAL) => false, // 就是删 global
@@ -1228,16 +1237,18 @@ pub struct BatchDeleteReport {
 }
 
 /// 批量删除：逐条调用单个删除逻辑，失败不中断，最终汇总
+/// `source` 为 None 时删除全部副本；指定时只删该来源（Agent 原生目录 / global）
 #[tauri::command]
 pub async fn batch_delete_skills(
     skill_ids: Vec<String>,
+    source: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<BatchDeleteReport, String> {
-    info!("Batch deleting {} skills", skill_ids.len());
+    info!("Batch deleting {} skills (source: {:?})", skill_ids.len(), source);
     let mut report = BatchDeleteReport::default();
 
     for skill_id in skill_ids {
-        match delete_skill_impl(skill_id.clone(), None, &state).await {
+        match delete_skill_impl(skill_id.clone(), source.clone(), &state).await {
             Ok(trash_id) => {
                 report.deleted.push(skill_id);
                 if let Some(id) = trash_id {

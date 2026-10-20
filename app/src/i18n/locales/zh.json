@@ -176,7 +176,8 @@
       "selectSources": "该技能存在于多个来源，请选择要删除的目录：",
       "description": "此操作将删除上述目录及其所有文件，并移除关联的符号链接，且不可撤销。",
       "confirm": "确认删除",
-      "advancedRequired": "删除非根目录来源的技能需要在设置中开启「高阶模式」"
+      "advancedRequired": "删除非根目录来源的技能需要在设置中开启「高阶模式」",
+      "enableAdvanced": "立即开启高阶模式"
     },
     "detail": {
       "fileDirectory": "文件目录：",
@@ -257,61 +258,70 @@
     "agentSourcePath": "扫描目录：",
     "noSkillsInSource": "该来源下暂无技能",
     "noSkillsInSourceSearch": "未找到「{{keyword}}」",
-      "importFromAgent": "从已有Agent导入",
-      "batch": {
-        "entry": "批量管理",
-        "selectAll": "全选/取消全选",
-        "done": "完成",
-        "selected": "已选 {{count}} 项",
-        "clear": "清空选择",
-        "agentLabel": "目标 Agent",
-        "enable": "启用",
-        "disable": "停用",
-        "delete": "删除",
-        "exit": "退出批量",
-        "deleting": "删除中…",
-        "deleteTitle": "删除 {{count}} 个技能",
-        "deleteWarning": "这些技能会被移入回收站，可在「设置 → 高级 → 回收站」恢复。",
-        "deleteConfirm": "移入回收站",
-        "enableDone": "已为 {{agent}} 启用 {{count}} 个技能",
-        "disableDone": "已停用 {{agent}} 上的 {{count}} 个技能",
-        "deleteDone": "已把 {{count}} 个技能移入回收站",
-        "partialFailed": "成功 {{ok}} 个，失败 {{failed}} 个：{{error}}"
+    "importFromAgent": "从已有Agent导入",
+    "batch": {
+      "entry": "批量管理",
+      "selectAll": "全选/取消全选",
+      "done": "完成",
+      "selected": "已选 {{count}} 项",
+      "clear": "清空选择",
+      "agentLabel": "目标 Agent",
+      "enable": "启用",
+      "disable": "停用",
+      "delete": "删除",
+      "exit": "退出批量",
+      "deleting": "删除中…",
+      "deleteTitle": "删除 {{count}} 个技能",
+      "deleteWarning": "这些技能会被移入回收站，可在「设置 → 高级 → 回收站」恢复。",
+      "deleteConfirm": "移入回收站",
+      "enableDone": "已为 {{agent}} 启用 {{count}} 个技能",
+      "disableDone": "已停用 {{agent}} 上的 {{count}} 个技能",
+      "deleteDone": "已把 {{count}} 个技能移入回收站",
+      "partialFailed": "成功 {{ok}} 个，失败 {{failed}} 个：{{error}}",
+      "scopeAll": "作用于全部来源",
+      "scopeGlobal": "作用于根目录 ~/.skills-manager",
+      "scopeAgent": "作用于 {{agent}}",
+      "noAgent": "没有可用的 Agent（需先在设置中启用）",
+      "deleteScopeAll": "将删除这 {{count}} 个技能的全部副本（含 Agent 原生目录）——Agent 目录下的副本会移入回收站。",
+      "deleteScopeGlobal": "只删除根目录 ~/.skills-manager/skills 下的副本，Agent 目录不受影响。",
+      "deleteScopeAgent": "只删除 {{agent}} 目录下的副本，其余来源不受影响。",
+      "deleteAdvancedRequired": "本次操作会修改 Agent 原生目录，请先在「设置 → 高级」中开启高阶模式。"
+    },
+    "consolidate": {
+      "entry": "归并到根目录",
+      "entryHint": "把该 Agent 目录下的技能移入根目录 ~/.skills-manager，并从 Agent 目录移除",
+      "title": "归并 {{agent}} 的技能",
+      "hint": "扫描该 Agent 原生目录下的技能，移入 ~/.skills-manager/skills；移入后 Agent 目录下的副本会被移除（不会建立链接），冲突项默认覆盖根目录副本（旧副本进回收站）。",
+      "planning": "正在生成归并计划…",
+      "planFailed": "无法生成归并计划：{{error}}",
+      "summary": {
+        "movable": "可归并 {{count}}",
+        "conflicts": "冲突 {{count}}",
+        "skipped": "跳过 {{count}}"
       },
-      "consolidate": {
-        "entry": "归并到根目录",
-        "entryHint": "把该 Agent 目录下的技能搬进中央技能库，再以链接方式回填",
-        "title": "归并 {{agent}} 的技能",
-        "hint": "扫描该 Agent 原生目录下的技能，搬入 ~/.skills-manager/skills 后以链接回填，只保留一份真实副本。",
-        "planning": "正在生成归并计划…",
-        "planFailed": "无法生成归并计划：{{error}}",
-        "summary": {
-          "movable": "可归并 {{count}}",
-          "conflicts": "冲突 {{count}}",
-          "skipped": "跳过 {{count}}"
-        },
-        "movableTitle": "可直接归并",
-        "conflictsTitle": "与根目录同名，需要选择处理方式",
-        "skippedTitle": "跳过（不会改动）",
-        "actions": {
-          "skip": "跳过",
-          "overwrite": "覆盖根目录",
-          "rename": "保留两者"
-        },
-        "skipReasons": {
-          "already_managed": "已由技能管理器接管",
-          "missing_skill_md": "缺少 SKILL.md",
-          "plugin_dir": "插件目录",
-          "plugin_cache": "插件缓存",
-          "extra_path": "来自额外扫描路径",
-          "hidden": "隐藏目录",
-          "not_a_dir": "不是目录"
-        },
-        "nothingToDo": "这个 Agent 目录下没有需要归并的技能。",
-        "apply": "归并 {{count}} 个技能",
-        "applying": "归并中…",
-        "result": "归并完成：搬移 {{moved}}，跳过 {{skipped}}，失败 {{failed}}"
-      }
+      "movableTitle": "可直接归并",
+      "conflictsTitle": "与根目录同名，需要选择处理方式",
+      "skippedTitle": "跳过（不会改动）",
+      "actions": {
+        "skip": "跳过",
+        "overwrite": "覆盖根目录",
+        "rename": "保留两者"
+      },
+      "skipReasons": {
+        "already_managed": "已由技能管理器接管",
+        "missing_skill_md": "缺少 SKILL.md",
+        "plugin_dir": "插件目录",
+        "plugin_cache": "插件缓存",
+        "extra_path": "来自额外扫描路径",
+        "hidden": "隐藏目录",
+        "not_a_dir": "不是目录"
+      },
+      "nothingToDo": "这个 Agent 目录下没有需要归并的技能。",
+      "apply": "归并 {{count}} 个技能",
+      "applying": "归并中…",
+      "result": "归并完成：搬移 {{moved}}，跳过 {{skipped}}，失败 {{failed}}"
+    },
+    "allSourcesLabel": "全部技能"
   },
   "githubBackup": {
     "title": "GitHub备份",
@@ -336,7 +346,8 @@
       "token": "Personal Access Token",
       "tokenPlaceholder": "ghp_xxxxxxxxxxxxxx",
       "tokenHelperBefore": "在 GitHub ➜ Settings ➜ Developer settings ➜ ",
-      "tokenHelperAfter": " 中生成 (需要 repo 权限)"    },
+      "tokenHelperAfter": " 中生成 (需要 repo 权限)"
+    },
     "syncMenu": {
       "openTitle": "同步选项",
       "overwriteRemote": " 以本地版本覆盖远程",
@@ -580,33 +591,33 @@
       "advancedDesc": "技能前缀过滤、隐藏规则、符号链接策略等高级配置会真实修改你的本地文件系统，只在桌面版里开放。",
       "downloadApp": "下载桌面版"
     },
-      "trash": {
-        "title": "回收站",
-        "description": "删除的技能会先放进这里，可以随时恢复。",
-        "refresh": "刷新",
-        "empty": "清空回收站",
-        "emptyConfirm": "确认清空？",
-        "emptyDone": "已清空 {{count}} 条回收站条目",
-        "emptyFailed": "清空回收站失败",
-        "emptyHint": "回收站是空的。",
-        "restore": "恢复",
-        "restoreDone": "已恢复「{{name}}」",
-        "restoreSkipped": "原路径已被占用，未能恢复",
-        "restorePartial": "恢复 {{restored}} 条，失败 {{failed}} 条",
-        "restoreFailed": "恢复失败",
-        "purge": "彻底删除",
-        "purgeConfirm": "确认彻底删除",
-        "purgeDone": "已彻底删除",
-        "purgeFailed": "彻底删除失败",
-        "stale": "路径被占用",
-        "staleHint": "原路径已有同名技能，只能彻底删除",
-        "entries": "{{count}} 个位置",
-        "loadFailed": "读取回收站失败",
-        "reason": {
-          "delete": "删除",
-          "overwrite": "归并覆盖"
-        }
+    "trash": {
+      "title": "回收站",
+      "description": "删除的技能会先放进这里，可以随时恢复。",
+      "refresh": "刷新",
+      "empty": "清空回收站",
+      "emptyConfirm": "确认清空？",
+      "emptyDone": "已清空 {{count}} 条回收站条目",
+      "emptyFailed": "清空回收站失败",
+      "emptyHint": "回收站是空的。",
+      "restore": "恢复",
+      "restoreDone": "已恢复「{{name}}」",
+      "restoreSkipped": "原路径已被占用，未能恢复",
+      "restorePartial": "恢复 {{restored}} 条，失败 {{failed}} 条",
+      "restoreFailed": "恢复失败",
+      "purge": "彻底删除",
+      "purgeConfirm": "确认彻底删除",
+      "purgeDone": "已彻底删除",
+      "purgeFailed": "彻底删除失败",
+      "stale": "路径被占用",
+      "staleHint": "原路径已有同名技能，只能彻底删除",
+      "entries": "{{count}} 个位置",
+      "loadFailed": "读取回收站失败",
+      "reason": {
+        "delete": "删除",
+        "overwrite": "归并覆盖"
       }
+    }
   },
   "common": {
     "processing": "处理中...",

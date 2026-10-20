@@ -15,7 +15,8 @@ import { agentsApi } from '@/api/tauri';
 import { OCTOPUS_LOGO_URL } from '@/lib/assets';
 import { Icon } from '@/components/Icon';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
-import { invoke } from '@tauri-apps/api/core';
+import { setAdvancedModeEnabled, useAdvancedMode } from '@/hooks/useAdvancedMode';
+import { skillsApi } from '@/api/tauri';
 
 // 模块级常量，避免每次渲染重新创建
 const REMARK_PLUGINS = [remarkGfm];
@@ -93,6 +94,7 @@ export const SkillDetailInline: React.FC<SkillDetailInlineProps> = memo(({
 }) => {
   const [markdownView, setMarkdownView] = useState<'raw' | 'preview'>('raw');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const advancedMode = useAdvancedMode();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const deferredContent = useDeferredValue(currentFile?.content ?? '');
@@ -124,7 +126,7 @@ export const SkillDetailInline: React.FC<SkillDetailInlineProps> = memo(({
 
     for (const source of sources) {
       try {
-        await invoke('delete_skill', { skillId: skill.id });
+        await skillsApi.delete(skill.id, source);
         succeeded.push(source);
       } catch {
         failed.push(source);
@@ -485,6 +487,8 @@ export const SkillDetailInline: React.FC<SkillDetailInlineProps> = memo(({
       <DeleteConfirmModal
         target={skill}
         rows={expandToSourceRows()}
+        advancedMode={advancedMode}
+        onEnableAdvancedMode={() => setAdvancedModeEnabled(true)}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setShowDeleteConfirm(false)}
       />,

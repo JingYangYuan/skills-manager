@@ -12,6 +12,8 @@ interface DeleteConfirmModalProps {
   /** 多源删除：每行一个 source；root-only 场景传空或单元素。 */
   rows?: SkillDeletionRow[];
   advancedMode?: boolean;
+  /** 点击「开启高阶模式」时调用：立即写入并广播开关，无需跳转设置页 */
+  onEnableAdvancedMode?: () => void;
   purpose?: DeletePurpose;
   onConfirm: (selected: SkillDeletionRow[]) => void;
   onCancel: () => void;
@@ -21,6 +23,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   target,
   rows,
   advancedMode = false,
+  onEnableAdvancedMode,
   purpose = 'multi-source',
   onConfirm,
   onCancel,
@@ -37,6 +40,8 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
       : [];
   const isMulti = items.length > 1;
   const isRootOnly = purpose === 'root-only';
+  // 是否存在被高阶模式锁住的非根目录来源
+  const hasLockedRows = items.some(r => r.source !== SOURCE.Global) && !advancedMode;
 
   const [checked, { add: checkItem, remove: uncheckItem, reset: resetChecked }] = useSet<string>();
   const isChecked = (key: string) => checked.has(key);
@@ -103,7 +108,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             const isLocked = row.source !== SOURCE.Global && !advancedMode;
             const isClickDisabled = isLocked || isRootOnly;
             return (
-              <div key={key} className="relative group/del">
+              <div key={key}>
                 <label
                   className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
                     isClickDisabled
@@ -129,20 +134,30 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
                     {row.path ? norm(row.path) : row.skill.id}
                   </span>
                 </label>
-                {isLocked && (
-                  <div className="hidden group-hover/del:flex absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-60 pointer-events-none z-50 justify-center">
-                    <div className="bg-white dark:bg-dark-bg-card border border-amber-200 dark:border-amber-500/30 rounded-lg shadow-lg p-2.5 flex gap-2 items-start">
-                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-500/20">
-                        <Icon name="warning" className="text-sm text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <p className="text-[11px] leading-relaxed text-slate-600 dark:text-gray-300">{t('dashboard.delete.advancedRequired')}</p>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}
         </div>
+
+        {hasLockedRows && (
+          <div className="mb-3 w-full flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left dark:border-amber-500/30 dark:bg-amber-950/30">
+            <Icon name="warning" className="mt-0.5 flex-shrink-0 text-sm text-amber-600 dark:text-amber-400" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+                {t('dashboard.delete.advancedRequired')}
+              </p>
+              {onEnableAdvancedMode && (
+                <button
+                  type="button"
+                  onClick={onEnableAdvancedMode}
+                  className="mt-1.5 text-[11px] font-bold text-amber-700 underline underline-offset-2 transition-colors hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-200"
+                >
+                  {t('dashboard.delete.enableAdvanced')}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <p className="text-xs text-slate-400 dark:text-gray-500 leading-relaxed mb-6 px-4">
           {t('dashboard.delete.description')}

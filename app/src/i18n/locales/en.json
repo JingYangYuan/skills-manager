@@ -159,7 +159,8 @@
       "selectSources": "This skill exists in multiple sources. Select which to delete:",
       "description": "This will delete the directory above and all its files, remove associated symbolic links. This cannot be undone.",
       "confirm": "Confirm Delete",
-      "advancedRequired": "Deleting non-root source skills requires enabling \"Advanced Mode\" in Settings"
+      "advancedRequired": "Deleting non-root source skills requires enabling \"Advanced Mode\" in Settings",
+      "enableAdvanced": "Enable Advanced Mode now"
     },
     "detail": {
       "fileDirectory": "File Directory:",
@@ -239,61 +240,70 @@
     "agentSourcePath": "Scan path: ",
     "noSkillsInSource": "No skills in this source",
     "noSkillsInSourceSearch": "No results for \"{{keyword}}\"",
-      "importFromAgent": "Import from Agent",
-      "batch": {
-        "entry": "Batch manage",
-        "selectAll": "Select all",
-        "done": "Done",
-        "selected": "{{count}} selected",
-        "clear": "Clear",
-        "agentLabel": "Target agent",
-        "enable": "Enable",
-        "disable": "Disable",
-        "delete": "Delete",
-        "exit": "Exit",
-        "deleting": "Deleting…",
-        "deleteTitle": "Delete {{count}} skills",
-        "deleteWarning": "These skills will be moved to the recycle bin and can be restored from Settings → Advanced → Recycle bin.",
-        "deleteConfirm": "Move to recycle bin",
-        "enableDone": "Enabled {{count}} skills for {{agent}}",
-        "disableDone": "Disabled {{count}} skills on {{agent}}",
-        "deleteDone": "Moved {{count}} skills to the recycle bin",
-        "partialFailed": "{{ok}} succeeded, {{failed}} failed: {{error}}"
+    "importFromAgent": "Import from Agent",
+    "batch": {
+      "entry": "Batch manage",
+      "selectAll": "Select all",
+      "done": "Done",
+      "selected": "{{count}} selected",
+      "clear": "Clear",
+      "agentLabel": "Target agent",
+      "enable": "Enable",
+      "disable": "Disable",
+      "delete": "Delete",
+      "exit": "Exit",
+      "deleting": "Deleting…",
+      "deleteTitle": "Delete {{count}} skills",
+      "deleteWarning": "These skills will be moved to the recycle bin and can be restored from Settings → Advanced → Recycle bin.",
+      "deleteConfirm": "Move to recycle bin",
+      "enableDone": "Enabled {{count}} skills for {{agent}}",
+      "disableDone": "Disabled {{count}} skills on {{agent}}",
+      "deleteDone": "Moved {{count}} skills to the recycle bin",
+      "partialFailed": "{{ok}} succeeded, {{failed}} failed: {{error}}",
+      "scopeAll": "Applies to all sources",
+      "scopeGlobal": "Applies to root ~/.skills-manager",
+      "scopeAgent": "Applies to {{agent}}",
+      "noAgent": "No agent available (enable one in Settings)",
+      "deleteScopeAll": "All copies of these {{count}} skills will be deleted (including Agent native directories) — those copies move to the recycle bin.",
+      "deleteScopeGlobal": "Only copies under ~/.skills-manager/skills are deleted; Agent directories stay untouched.",
+      "deleteScopeAgent": "Only copies under the {{agent}} directory are deleted; other sources stay untouched.",
+      "deleteAdvancedRequired": "This operation modifies an Agent native directory. Enable Advanced Mode in Settings → Advanced first."
+    },
+    "consolidate": {
+      "entry": "Merge into root",
+      "entryHint": "Move this agent’s skills into ~/.skills-manager and remove them from the agent directory",
+      "title": "Merge {{agent}} skills",
+      "hint": "Scans the agent native directory and moves skills into ~/.skills-manager/skills. Copies under the agent directory are removed (no links are created); conflicts default to overwriting the root copy, which goes to the recycle bin.",
+      "planning": "Building merge plan…",
+      "planFailed": "Could not build merge plan: {{error}}",
+      "summary": {
+        "movable": "{{count}} movable",
+        "conflicts": "{{count}} conflicts",
+        "skipped": "{{count}} skipped"
       },
-      "consolidate": {
-        "entry": "Merge into root",
-        "entryHint": "Move this agent’s skills into the central library and link them back",
-        "title": "Merge {{agent}} skills",
-        "hint": "Skills found in this agent’s native directory are moved into ~/.skills-manager/skills and linked back, leaving a single real copy.",
-        "planning": "Building merge plan…",
-        "planFailed": "Could not build merge plan: {{error}}",
-        "summary": {
-          "movable": "{{count}} movable",
-          "conflicts": "{{count}} conflicts",
-          "skipped": "{{count}} skipped"
-        },
-        "movableTitle": "Ready to merge",
-        "conflictsTitle": "Same name exists in the root folder — choose how to handle it",
-        "skippedTitle": "Skipped (left untouched)",
-        "actions": {
-          "skip": "Skip",
-          "overwrite": "Overwrite root",
-          "rename": "Keep both"
-        },
-        "skipReasons": {
-          "already_managed": "Already managed by Skills Manager",
-          "missing_skill_md": "Missing SKILL.md",
-          "plugin_dir": "Plugin directory",
-          "plugin_cache": "Plugin cache",
-          "extra_path": "From an extra scan path",
-          "hidden": "Hidden directory",
-          "not_a_dir": "Not a directory"
-        },
-        "nothingToDo": "Nothing to merge in this agent directory.",
-        "apply": "Merge {{count}} skills",
-        "applying": "Merging…",
-        "result": "Merged: {{moved}} moved, {{skipped}} skipped, {{failed}} failed"
-      }
+      "movableTitle": "Ready to merge",
+      "conflictsTitle": "Same name exists in the root folder — choose how to handle it",
+      "skippedTitle": "Skipped (left untouched)",
+      "actions": {
+        "skip": "Skip",
+        "overwrite": "Overwrite root",
+        "rename": "Keep both"
+      },
+      "skipReasons": {
+        "already_managed": "Already managed by Skills Manager",
+        "missing_skill_md": "Missing SKILL.md",
+        "plugin_dir": "Plugin directory",
+        "plugin_cache": "Plugin cache",
+        "extra_path": "From an extra scan path",
+        "hidden": "Hidden directory",
+        "not_a_dir": "Not a directory"
+      },
+      "nothingToDo": "Nothing to merge in this agent directory.",
+      "apply": "Merge {{count}} skills",
+      "applying": "Merging…",
+      "result": "Merged: {{moved}} moved, {{skipped}} skipped, {{failed}} failed"
+    },
+    "allSourcesLabel": "All skills"
   },
   "githubBackup": {
     "title": "GitHub Backup",
@@ -318,7 +328,8 @@
       "token": "Personal Access Token",
       "tokenPlaceholder": "ghp_xxxxxxxxxxxxxx",
       "tokenHelperBefore": "Generate in GitHub ➜ Settings ➜ Developer settings ➜ ",
-      "tokenHelperAfter": " (requires repo permission)"    },
+      "tokenHelperAfter": " (requires repo permission)"
+    },
     "syncMenu": {
       "openTitle": "Sync options",
       "overwriteRemote": "Overwrite remote with this copy",
@@ -562,33 +573,33 @@
       "advancedDesc": "Skill prefix filters, hide rules and symlink strategy change your local filesystem — desktop-only by design.",
       "downloadApp": "Download desktop app"
     },
-      "trash": {
-        "title": "Recycle bin",
-        "description": "Deleted skills land here first and can be restored at any time.",
-        "refresh": "Refresh",
-        "empty": "Empty bin",
-        "emptyConfirm": "Empty it?",
-        "emptyDone": "Removed {{count}} item(s) from the recycle bin",
-        "emptyFailed": "Failed to empty the recycle bin",
-        "emptyHint": "The recycle bin is empty.",
-        "restore": "Restore",
-        "restoreDone": "Restored “{{name}}”",
-        "restoreSkipped": "Original path is occupied, nothing was restored",
-        "restorePartial": "Restored {{restored}}, failed {{failed}}",
-        "restoreFailed": "Restore failed",
-        "purge": "Delete forever",
-        "purgeConfirm": "Delete permanently",
-        "purgeDone": "Deleted permanently",
-        "purgeFailed": "Permanent delete failed",
-        "stale": "Path occupied",
-        "staleHint": "A skill already exists at the original path; only permanent deletion is possible",
-        "entries": "{{count}} location(s)",
-        "loadFailed": "Failed to read the recycle bin",
-        "reason": {
-          "delete": "Deleted",
-          "overwrite": "Merged over"
-        }
+    "trash": {
+      "title": "Recycle bin",
+      "description": "Deleted skills land here first and can be restored at any time.",
+      "refresh": "Refresh",
+      "empty": "Empty bin",
+      "emptyConfirm": "Empty it?",
+      "emptyDone": "Removed {{count}} item(s) from the recycle bin",
+      "emptyFailed": "Failed to empty the recycle bin",
+      "emptyHint": "The recycle bin is empty.",
+      "restore": "Restore",
+      "restoreDone": "Restored “{{name}}”",
+      "restoreSkipped": "Original path is occupied, nothing was restored",
+      "restorePartial": "Restored {{restored}}, failed {{failed}}",
+      "restoreFailed": "Restore failed",
+      "purge": "Delete forever",
+      "purgeConfirm": "Delete permanently",
+      "purgeDone": "Deleted permanently",
+      "purgeFailed": "Permanent delete failed",
+      "stale": "Path occupied",
+      "staleHint": "A skill already exists at the original path; only permanent deletion is possible",
+      "entries": "{{count}} location(s)",
+      "loadFailed": "Failed to read the recycle bin",
+      "reason": {
+        "delete": "Deleted",
+        "overwrite": "Merged over"
       }
+    }
   },
   "common": {
     "processing": "Processing...",

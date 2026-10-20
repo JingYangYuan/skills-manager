@@ -152,8 +152,8 @@ export const skillsApi = {
   },
 
   /** 批量删除（进回收站，可恢复） */
-  batchDelete: async (skillIds: string[]): Promise<BatchDeleteReport> => {
-    return await invoke<BatchDeleteReport>('batch_delete_skills', { skillIds });
+  batchDelete: async (skillIds: string[], source?: string): Promise<BatchDeleteReport> => {
+    return await invoke<BatchDeleteReport>('batch_delete_skills', { skillIds, source });
   },
 
   /** 批量启用/停用同一 Agent */

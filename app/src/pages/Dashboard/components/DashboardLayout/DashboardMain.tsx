@@ -177,11 +177,21 @@ export const DashboardMain: React.FC<DashboardMainProps> = memo(({
       <div className="relative flex-1 flex overflow-hidden bg-[var(--bg-primary)] dark:bg-dark-bg-secondary px-5 pl-0">
         {sidebar}
         <div ref={scrollContainerRef} onScroll={onMainScroll} className={`relative flex-1 overflow-y-auto pb-20 ${isDragOver ? 'border-4 border-[var(--accent-primary)] bg-white/90 dark:bg-dark-bg/90 rounded-xl' : ''}`}>
-          {/* 当前扫描路径 */}
-          {selectedSource && selectedSource !== SOURCE.All && (
+          {/* 当前扫描路径 + 批量/归并入口（「全部技能」视图下也保留入口） */}
+          {(
             <div className="flex items-center justify-between gap-4 pb-2">
               <div className="flex items-center gap-2">
-                {selectedSource === SOURCE.Global ? (
+                {selectedSource === SOURCE.All ? (
+                  <>
+                    <Icon name="apps" className="text-base text-[var(--text-secondary)] dark:text-gray-400" />
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-gray-400">
+                      {t('dashboard.allSourcesLabel')}
+                      <span className="ml-1 font-mono text-[var(--text-primary)] dark:text-slate-200">
+                        {filteredBySource.length}
+                      </span>
+                    </p>
+                  </>
+                ) : selectedSource === SOURCE.Global ? (
                   <>
                     <img src={OCTOPUS_LOGO_URL} alt="Skills Manager" className="w-4 h-4 flex-shrink-0" />
                     <p className="text-xs text-[var(--text-secondary)] dark:text-gray-400">
@@ -230,17 +240,10 @@ export const DashboardMain: React.FC<DashboardMainProps> = memo(({
                       <Icon name="check" className="text-xs" />
                       {t('dashboard.batch.selectAll')}
                     </button>
-                    <button
-                      onClick={onExitSelection}
-                      className="text-[11px] text-[var(--text-primary)] dark:text-slate-300 font-medium px-2 py-1 bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary rounded hover:bg-[var(--hover-bg)] dark:hover:bg-dark-hover transition-all flex items-center gap-1.5"
-                    >
-                      <Icon name="close" className="text-xs" />
-                      {t('dashboard.batch.done')}
-                    </button>
                   </>
                 ) : (
                   <>
-                    {selectedSource !== SOURCE.Global && (
+                    {selectedSource !== SOURCE.Global && selectedSource !== SOURCE.All && (
                       <button
                         onClick={() => onOpenConsolidate(selectedSource)}
                         title={t('dashboard.consolidate.entryHint')}
@@ -311,6 +314,7 @@ export const DashboardMain: React.FC<DashboardMainProps> = memo(({
         <BatchActionBar
           count={selectionCount}
           agents={agents}
+          scope={selectedSource}
           busy={batchBusy}
           onClear={onClearSelection}
           onCancel={onExitSelection}

@@ -40,7 +40,9 @@ export function ConsolidateModal({ isOpen, agent, onClose, onDone }: Consolidate
       setPlan(next);
       const defaults: Record<string, ConflictAction> = {};
       next.conflicts.forEach(c => {
-        defaults[c.id] = 'skip';
+        // 默认“覆盖”：归并的语义就是把 Agent 目录下的副本搬走，
+        // 冲突项若默认跳过，用户点完归并会发现 Agent 目录里还留着一堆技能。
+        defaults[c.id] = 'overwrite';
       });
       setDecisions(defaults);
     } catch (e) {

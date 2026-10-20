@@ -158,7 +158,8 @@
       "selectSources": "このスキルは複数のソースに存在します。削除するソースを選択してください：",
       "description": "この操作により、上記のディレクトリとそのすべてのファイルが削除され、関連するシンボリックリンクが削除されます。この操作は取り消せません。",
       "confirm": "削除を確認",
-      "advancedRequired": "ルート以外のソーススキルを削除するには、設定で「詳細モード」を有効にする必要があります"
+      "advancedRequired": "ルート以外のソーススキルを削除するには、設定で「詳細モード」を有効にする必要があります",
+      "enableAdvanced": "詳細モードを今すぐ有効にする"
     },
     "detail": {
       "fileDirectory": "ファイルディレクトリ：",
@@ -238,61 +239,70 @@
     "agentSourcePath": "スキャンパス：",
     "noSkillsInSource": "このソースにはスキルがありません",
     "noSkillsInSourceSearch": "「{{keyword}}」の結果が見つかりませんでした",
-      "importFromAgent": "既存の Agent からインポート",
-      "batch": {
-        "entry": "一括管理",
-        "selectAll": "すべて選択/解除",
-        "done": "完了",
-        "selected": "{{count}} 件選択中",
-        "clear": "選択をクリア",
-        "agentLabel": "対象 Agent",
-        "enable": "有効化",
-        "disable": "無効化",
-        "delete": "削除",
-        "exit": "一括モード終了",
-        "deleting": "削除中…",
-        "deleteTitle": "{{count}} 件のスキルを削除",
-        "deleteWarning": "これらのスキルはゴミ箱に移動します。「設定 → 詳細 → ゴミ箱」から復元できます。",
-        "deleteConfirm": "ゴミ箱へ移動",
-        "enableDone": "{{agent}} で {{count}} 件のスキルを有効化しました",
-        "disableDone": "{{agent}} の {{count}} 件のスキルを無効化しました",
-        "deleteDone": "{{count}} 件のスキルをゴミ箱へ移動しました",
-        "partialFailed": "成功 {{ok}} 件、失敗 {{failed}} 件：{{error}}"
+    "importFromAgent": "既存の Agent からインポート",
+    "batch": {
+      "entry": "一括管理",
+      "selectAll": "すべて選択/解除",
+      "done": "完了",
+      "selected": "{{count}} 件選択中",
+      "clear": "選択をクリア",
+      "agentLabel": "対象 Agent",
+      "enable": "有効化",
+      "disable": "無効化",
+      "delete": "削除",
+      "exit": "一括モード終了",
+      "deleting": "削除中…",
+      "deleteTitle": "{{count}} 件のスキルを削除",
+      "deleteWarning": "これらのスキルはゴミ箱に移動します。「設定 → 詳細 → ゴミ箱」から復元できます。",
+      "deleteConfirm": "ゴミ箱へ移動",
+      "enableDone": "{{agent}} で {{count}} 件のスキルを有効化しました",
+      "disableDone": "{{agent}} の {{count}} 件のスキルを無効化しました",
+      "deleteDone": "{{count}} 件のスキルをゴミ箱へ移動しました",
+      "partialFailed": "成功 {{ok}} 件、失敗 {{failed}} 件：{{error}}",
+      "scopeAll": "すべてのソースが対象",
+      "scopeGlobal": "ルート ~/.skills-manager が対象",
+      "scopeAgent": "{{agent}} が対象",
+      "noAgent": "利用可能な Agent がありません（設定で有効化してください）",
+      "deleteScopeAll": "これら {{count}} 件のスキルの全コピー（Agent ネイティブディレクトリを含む）を削除します。Agent 側のコピーはゴミ箱に移動します。",
+      "deleteScopeGlobal": "~/.skills-manager/skills 配下のコピーのみ削除し、Agent ディレクトリは変更しません。",
+      "deleteScopeAgent": "{{agent}} ディレクトリ配下のコピーのみ削除し、他のソースは変更しません。",
+      "deleteAdvancedRequired": "この操作は Agent ネイティブディレクトリを変更します。先に「設定 → 詳細」で詳細モードを有効にしてください。"
+    },
+    "consolidate": {
+      "entry": "ルートへ統合",
+      "entryHint": "この Agent のスキルを ~/.skills-manager に移動し、Agent ディレクトリから削除します",
+      "title": "{{agent}} のスキルを統合",
+      "hint": "Agent ネイティブディレクトリのスキルを ~/.skills-manager/skills に移動します。移動後、Agent ディレクトリ側のコピーは削除されます（リンクは作成しません）。競合は既定でルート側を上書きし、旧コピーはゴミ箱に移動します。",
+      "planning": "統合プランを作成中…",
+      "planFailed": "統合プランを作成できません：{{error}}",
+      "summary": {
+        "movable": "統合可能 {{count}}",
+        "conflicts": "競合 {{count}}",
+        "skipped": "スキップ {{count}}"
       },
-      "consolidate": {
-        "entry": "ルートへ統合",
-        "entryHint": "この Agent のスキルを中央ライブラリへ移し、リンクで戻します",
-        "title": "{{agent}} のスキルを統合",
-        "hint": "この Agent のネイティブディレクトリにあるスキルを ~/.skills-manager/skills へ移し、リンクで戻します。実体は 1 つだけ残ります。",
-        "planning": "統合プランを作成中…",
-        "planFailed": "統合プランを作成できません：{{error}}",
-        "summary": {
-          "movable": "統合可能 {{count}}",
-          "conflicts": "競合 {{count}}",
-          "skipped": "スキップ {{count}}"
-        },
-        "movableTitle": "そのまま統合",
-        "conflictsTitle": "ルートに同名あり — 処理方法を選択",
-        "skippedTitle": "スキップ（変更しません）",
-        "actions": {
-          "skip": "スキップ",
-          "overwrite": "ルートを上書き",
-          "rename": "両方残す"
-        },
-        "skipReasons": {
-          "already_managed": "すでに Skills Manager が管理",
-          "missing_skill_md": "SKILL.md がない",
-          "plugin_dir": "プラグインディレクトリ",
-          "plugin_cache": "プラグインキャッシュ",
-          "extra_path": "追加スキャンパス由来",
-          "hidden": "隠しディレクトリ",
-          "not_a_dir": "ディレクトリではない"
-        },
-        "nothingToDo": "この Agent ディレクトリに統合対象はありません。",
-        "apply": "{{count}} 件を統合",
-        "applying": "統合中…",
-        "result": "統合完了：移動 {{moved}}、スキップ {{skipped}}、失敗 {{failed}}"
-      }
+      "movableTitle": "そのまま統合",
+      "conflictsTitle": "ルートに同名あり — 処理方法を選択",
+      "skippedTitle": "スキップ（変更しません）",
+      "actions": {
+        "skip": "スキップ",
+        "overwrite": "ルートを上書き",
+        "rename": "両方残す"
+      },
+      "skipReasons": {
+        "already_managed": "すでに Skills Manager が管理",
+        "missing_skill_md": "SKILL.md がない",
+        "plugin_dir": "プラグインディレクトリ",
+        "plugin_cache": "プラグインキャッシュ",
+        "extra_path": "追加スキャンパス由来",
+        "hidden": "隠しディレクトリ",
+        "not_a_dir": "ディレクトリではない"
+      },
+      "nothingToDo": "この Agent ディレクトリに統合対象はありません。",
+      "apply": "{{count}} 件を統合",
+      "applying": "統合中…",
+      "result": "統合完了：移動 {{moved}}、スキップ {{skipped}}、失敗 {{failed}}"
+    },
+    "allSourcesLabel": "すべてのスキル"
   },
   "githubBackup": {
     "title": "GitHubバックアップ",
@@ -562,33 +572,33 @@
       "advancedDesc": "スキルプレフィックスフィルター、非表示ルール、シンボリックリンク戦略はローカルファイルシステムを変更します — 設計上デスクライトのみです。",
       "downloadApp": "デスクトップアプリをダウンロード"
     },
-      "trash": {
-        "title": "ゴミ箱",
-        "description": "削除したスキルはまずここに入り、いつでも復元できます。",
-        "refresh": "更新",
-        "empty": "ゴミ箱を空にする",
-        "emptyConfirm": "空にしますか？",
-        "emptyDone": "ゴミ箱の {{count}} 件を削除しました",
-        "emptyFailed": "ゴミ箱を空にできませんでした",
-        "emptyHint": "ゴミ箱は空です。",
-        "restore": "復元",
-        "restoreDone": "「{{name}}」を復元しました",
-        "restoreSkipped": "元のパスが使用中のため復元できません",
-        "restorePartial": "{{restored}} 件復元、{{failed}} 件失敗",
-        "restoreFailed": "復元に失敗しました",
-        "purge": "完全に削除",
-        "purgeConfirm": "完全に削除する",
-        "purgeDone": "完全に削除しました",
-        "purgeFailed": "完全削除に失敗しました",
-        "stale": "パス使用中",
-        "staleHint": "元のパスに同名スキルがあるため、完全削除のみ可能です",
-        "entries": "{{count}} か所",
-        "loadFailed": "ゴミ箱の読み込みに失敗しました",
-        "reason": {
-          "delete": "削除",
-          "overwrite": "統合で上書き"
-        }
+    "trash": {
+      "title": "ゴミ箱",
+      "description": "削除したスキルはまずここに入り、いつでも復元できます。",
+      "refresh": "更新",
+      "empty": "ゴミ箱を空にする",
+      "emptyConfirm": "空にしますか？",
+      "emptyDone": "ゴミ箱の {{count}} 件を削除しました",
+      "emptyFailed": "ゴミ箱を空にできませんでした",
+      "emptyHint": "ゴミ箱は空です。",
+      "restore": "復元",
+      "restoreDone": "「{{name}}」を復元しました",
+      "restoreSkipped": "元のパスが使用中のため復元できません",
+      "restorePartial": "{{restored}} 件復元、{{failed}} 件失敗",
+      "restoreFailed": "復元に失敗しました",
+      "purge": "完全に削除",
+      "purgeConfirm": "完全に削除する",
+      "purgeDone": "完全に削除しました",
+      "purgeFailed": "完全削除に失敗しました",
+      "stale": "パス使用中",
+      "staleHint": "元のパスに同名スキルがあるため、完全削除のみ可能です",
+      "entries": "{{count}} か所",
+      "loadFailed": "ゴミ箱の読み込みに失敗しました",
+      "reason": {
+        "delete": "削除",
+        "overwrite": "統合で上書き"
       }
+    }
   },
   "common": {
     "processing": "処理中...",

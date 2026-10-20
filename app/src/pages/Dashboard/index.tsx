@@ -8,6 +8,7 @@ import { SOURCE, isSource } from '@/pages/Dashboard/utils/source';
 import { sortAgentsByStoredOrder } from '@/lib/agentOrder';
 import { skillsApi, trashApi } from '@/api/tauri';
 import { useHiddenAgents } from '@/hooks/useHiddenAgents';
+import { setAdvancedModeEnabled, useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { useSidebar } from '@/contexts/SidebarContext';
 
 // Hooks
@@ -241,6 +242,9 @@ function Dashboard({
 
   // 批量管理与 Agent 一键归并
   const selection = useSkillSelection();
+  const advancedMode = useAdvancedMode();
+  /** 批量删除的作用域：all 删全部副本；否则只删当前来源 */
+  const batchDeleteScope = selectedSource === SOURCE.All ? undefined : selectedSource;
   const [batchBusy, setBatchBusy] = useState(false);
   const [showBatchDelete, setShowBatchDelete] = useState(false);
   const [consolidateAgentName, setConsolidateAgentName] = useState<string | null>(null);
@@ -298,7 +302,7 @@ function Dashboard({
     if (ids.length === 0) return;
     setBatchBusy(true);
     try {
-      const report = await skillsApi.batchDelete(ids);
+      const report = await skillsApi.batchDelete(ids, batchDeleteScope);
       await refreshSkills();
       if (report.failed.length > 0) {
         showToast(
@@ -520,6 +524,9 @@ function Dashboard({
       <BatchDeleteConfirm
         isOpen={showBatchDelete}
         skills={selectedSkills}
+        scope={selectedSource}
+        advancedMode={advancedMode}
+        onEnableAdvancedMode={() => setAdvancedModeEnabled(true)}
         busy={batchBusy}
         onConfirm={handleBatchDelete}
         onCancel={() => setShowBatchDelete(false)}
@@ -541,7 +548,7 @@ function Dashboard({
         onHelpClick={handleHelpClick}
         logButtonRef={logButtonRef}
         onLogClick={handleLogClick}
-        isDrawerOpen={!!(showDetailModal && detailSkillLive)}
+        isDrawerOpen={!!(showDetailModal && detailSkillLive) || selection.selectionMode}
         isScrolling={isScrolling}
       />
     </div>
