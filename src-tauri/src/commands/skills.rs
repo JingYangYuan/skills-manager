@@ -1,11 +1,12 @@
-use crate::linker::LinkManager;
+use crate::linker::{is_junction_or_symlink, LinkManager};
 use crate::models::{AgentConfig, SkillEntry, SkillFileEntry, SkillMetadata, SOURCE_GLOBAL};
 use crate::scanner;
 use crate::settings::AppSettingsManager;
 use crate::state::AppState;
 use log::{info, warn};
 use regex::Regex;
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use tauri::State;
 
 /// 展开路径中的 ~ 为用户主目录
@@ -42,15 +43,37 @@ fn scan_only(
         .map_err(|e| format!("Failed to scan skills: {}", e))
 }
 
-/// 扫描 + 立刻落盘。用于单纯读取场景（list_skills / rescan_skills）。
+/// 扫描 + 按需落盘。用于单纯读取场景（list_skills / rescan_skills）。
+/// 扫描未引起配置实际变化时跳过写盘，避免每次刷新列表都原子写一次 config.json。
 fn scan_and_persist(
     settings: &mut crate::settings::AppSettingsManager,
 ) -> Result<Vec<SkillMetadata>, String> {
+    let before = serde_json::to_string(settings.get_config())
+        .map_err(|e| format!("Failed to serialize config: {}", e))?;
     let skills = scan_only(settings)?;
-    settings
-        .save()
-        .map_err(|e| format!("Failed to save config: {}", e))?;
+    let after = serde_json::to_string(settings.get_config())
+        .map_err(|e| format!("Failed to serialize config: {}", e))?;
+    if before != after {
+        settings
+            .save()
+            .map_err(|e| format!("Failed to save config: {}", e))?;
+        info!("Config changed by scan, persisted");
+    }
     Ok(skills)
+}
+
+/// 让技能列表缓存失效（任何会改变磁盘链接或 skill_states 的写入后调用）。
+fn invalidate_skills_cache(state: &AppState) {
+    if let Ok(mut cache) = state.skills_cache.lock() {
+        *cache = None;
+    }
+}
+
+/// 写入技能列表缓存。
+fn store_skills_cache(state: &AppState, skills: &[SkillMetadata]) {
+    if let Ok(mut cache) = state.skills_cache.lock() {
+        *cache = Some(skills.to_vec());
+    }
 }
 
 /// 清空中央存储中指定 skill 的副本。在以下场景调用：
@@ -76,6 +99,8 @@ pub async fn list_skills(state: State<'_, AppState>) -> Result<Vec<SkillMetadata
         .map_err(|e| format!("Failed to acquire lock: {}", e))?;
 
     let skills = scan_and_persist(&mut settings)?;
+    drop(settings);
+    store_skills_cache(&state, &skills);
     info!("Found {} skills", skills.len());
     Ok(skills)
 }
@@ -100,6 +125,8 @@ pub async fn enable_skill(
 ) -> Result<(), String> {
     info!("Enabling skill '{}' for agent: {:?}", skill_id, agent);
 
+    let agent_name = agent.ok_or_else(|| "agent 参数必填".to_string())?;
+
     let mut settings = state
         .settings_manager
         .lock()
@@ -122,47 +149,47 @@ pub async fn enable_skill(
         .get_mut(&skill_id)
         .ok_or_else(|| format!("Skill '{}' missing in skill_states after scan", skill_id))?;
 
-    let target_agents: Vec<AgentConfig> = if let Some(ref a) = agent {
-        config
-            .agents
-            .iter()
-            .filter(|ac| &ac.name == a)
-            .cloned()
-            .collect()
-    } else {
-        config
-            .agents
-            .iter()
-            .filter(|ac| ac.enabled && ac.detected)
-            .cloned()
-            .collect()
-    };
+    let target_agents: Vec<AgentConfig> = config
+        .agents
+        .iter()
+        .filter(|ac| ac.name == agent_name)
+        .cloned()
+        .collect();
 
     if target_agents.is_empty() {
-        if let Some(ref a) = agent {
-            return Err(format!("Agent '{}' not found", a));
-        }
-        return Ok(());
+        return Err(format!("Agent '{}' not found", agent_name));
     }
 
     let mut linked = 0usize;
+    let mut failures: Vec<String> = Vec::new();
     for agent_config in &target_agents {
         // 原生 Agent：不碰 open，不重复 link
         if is_native(entry, &agent_config.name) {
             continue;
         }
-        if !entry.open.iter().any(|n| n == &agent_config.name) {
-            entry.open.push(agent_config.name.clone());
-        }
         match linker.link_skill_to_agent(&skill, agent_config, &skills_base) {
-            Ok(_) => linked += 1,
-            Err(e) => warn!("Failed to link to agent {}: {}", agent_config.name, e),
+            Ok(_) => {
+                linked += 1;
+                if !entry.open.iter().any(|n| n == &agent_config.name) {
+                    entry.open.push(agent_config.name.clone());
+                }
+            }
+            Err(e) => {
+                warn!("Failed to link to agent {}: {}", agent_config.name, e);
+                failures.push(format!("{}: {}", agent_config.name, e));
+            }
         }
     }
 
     settings
         .save()
         .map_err(|e| format!("Failed to save config: {}", e))?;
+    invalidate_skills_cache(&state);
+
+    if linked == 0 && !failures.is_empty() {
+        return Err(format!("启用失败: {}", failures.join("; ")));
+    }
+
     info!("Successfully enabled skill for {} agents", linked);
     Ok(())
 }
@@ -175,6 +202,8 @@ pub async fn disable_skill(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     info!("Disabling skill '{}' for agent: {:?}", skill_id, agent);
+
+    let agent_name = agent.ok_or_else(|| "agent 参数必填".to_string())?;
 
     let mut settings = state
         .settings_manager
@@ -190,27 +219,15 @@ pub async fn disable_skill(
     let config = settings.get_config().clone();
     let linker = LinkManager::new(config.linking_strategy.clone());
 
-    let target_agents: Vec<AgentConfig> = if let Some(ref a) = agent {
-        config
-            .agents
-            .iter()
-            .filter(|ac| &ac.name == a)
-            .cloned()
-            .collect()
-    } else {
-        config
-            .agents
-            .iter()
-            .filter(|ac| ac.enabled && ac.detected)
-            .cloned()
-            .collect()
-    };
+    let target_agents: Vec<AgentConfig> = config
+        .agents
+        .iter()
+        .filter(|ac| ac.name == agent_name)
+        .cloned()
+        .collect();
 
     if target_agents.is_empty() {
-        if let Some(ref a) = agent {
-            return Err(format!("Agent '{}' not found", a));
-        }
-        return Ok(());
+        return Err(format!("Agent '{}' not found", agent_name));
     }
 
     let entry = match settings.get_config_mut().skill_states.get_mut(&skill_id) {
@@ -219,6 +236,7 @@ pub async fn disable_skill(
     };
 
     let mut unlinked = 0usize;
+    let mut failures: Vec<String> = Vec::new();
     for agent_config in &target_agents {
         if is_native(entry, &agent_config.name) {
             warn!(
@@ -227,16 +245,27 @@ pub async fn disable_skill(
             );
             continue;
         }
-        entry.open.retain(|n| n != &agent_config.name);
         match linker.unlink_skill_from_agent(&skill, agent_config) {
-            Ok(_) => unlinked += 1,
-            Err(e) => warn!("Failed to unlink from agent {}: {}", agent_config.name, e),
+            Ok(_) => {
+                unlinked += 1;
+                entry.open.retain(|n| n != &agent_config.name);
+            }
+            Err(e) => {
+                warn!("Failed to unlink from agent {}: {}", agent_config.name, e);
+                failures.push(format!("{}: {}", agent_config.name, e));
+            }
         }
     }
 
     settings
         .save()
         .map_err(|e| format!("Failed to save config: {}", e))?;
+    invalidate_skills_cache(&state);
+
+    if unlinked == 0 && !failures.is_empty() {
+        return Err(format!("停用失败: {}", failures.join("; ")));
+    }
+
     info!("Successfully disabled skill for {} agents", unlinked);
     Ok(())
 }
@@ -324,6 +353,7 @@ pub async fn set_skill_primary(
     settings
         .save()
         .map_err(|e| format!("Failed to save config: {}", e))?;
+    invalidate_skills_cache(&state);
     Ok(())
 }
 
@@ -353,13 +383,25 @@ pub async fn get_skill_files(
         skill_id, source
     );
 
-    let guard = state
-        .settings_manager
+    // 优先使用缓存（list_skills / 写操作维护），避免每次展开都全盘扫描
+    let cached = state
+        .skills_cache
         .lock()
-        .map_err(|e| format!("Failed to acquire lock: {}", e))?;
-    let config = guard.get_config();
-    let skills = scanner::scan_all_skill_sources(&config.skill_states, &config.agents)
-        .map_err(|e| format!("Failed to scan skills: {}", e))?;
+        .ok()
+        .and_then(|cache| cache.clone());
+
+    let skills = match cached {
+        Some(skills) => skills,
+        None => {
+            let guard = state
+                .settings_manager
+                .lock()
+                .map_err(|e| format!("Failed to acquire lock: {}", e))?;
+            let config = guard.get_config();
+            scanner::scan_all_skill_sources(&config.skill_states, &config.agents)
+                .map_err(|e| format!("Failed to scan skills: {}", e))?
+        }
+    };
 
     let skill = skills
         .iter()
@@ -621,6 +663,7 @@ pub async fn delete_skill(
     }
 
     info!("Skill '{}' deleted successfully", skill_id);
+    invalidate_skills_cache(&state);
     Ok(())
 }
 
@@ -794,65 +837,183 @@ pub async fn copy_skill_to_agent(
         );
     }
 
+    invalidate_skills_cache(&state);
     Ok(skill.name.clone())
 }
 
 /// 内部启用技能逻辑（避免重复代码）
+///
+/// 与 `enable_skill` 一致：既更新 `entry.open`，也真正建立链接，
+/// 避免出现「状态说已启用、磁盘上却没有链接」的不一致。
 fn enable_skill_internal(
     skill_id: String,
     agent: Option<String>,
     settings: &mut crate::settings::AppSettingsManager,
 ) -> Result<(), String> {
-    // 先收集需要启用的 agents
-    let target_agents = {
-        let config = settings.get_config();
-        if let Some(agent_name) = agent {
-            vec![agent_name]
-        } else {
-            // 如果没有指定 agent，则启用到所有已配置的 agents
-            config
-                .agents
-                .iter()
-                .filter(|a| a.enabled)
-                .map(|a| a.name.clone())
-                .collect()
+    let agent_name = agent.ok_or_else(|| "agent 参数必填".to_string())?;
+
+    let skills = scan_only(settings)?;
+    let skill = skills
+        .into_iter()
+        .find(|s| s.id == skill_id)
+        .ok_or_else(|| format!("Skill '{}' not found", skill_id))?;
+
+    let config = settings.get_config().clone();
+    let agent_config = config
+        .agents
+        .iter()
+        .find(|a| a.name == agent_name)
+        .cloned()
+        .ok_or_else(|| format!("Agent '{}' not found", agent_name))?;
+
+    if !agent_config.enabled {
+        warn!("Agent '{}' is not enabled, skipping", agent_name);
+        return Ok(());
+    }
+
+    let native = settings
+        .get_config()
+        .skill_states
+        .get(&skill_id)
+        .map(|entry| is_native(entry, &agent_name))
+        .unwrap_or(false);
+
+    if !native {
+        let linker = LinkManager::new(config.linking_strategy.clone());
+        if let Err(e) = linker.link_skill_to_agent(&skill, &agent_config, &dummy_skills_base()) {
+            return Err(format!(
+                "Failed to link '{}' to agent '{}': {}",
+                skill_id, agent_name, e
+            ));
         }
-    };
-
-    for agent_name in target_agents {
-        // 检查 agent 是否启用
-        let agent_enabled = {
-            let config = settings.get_config();
-            let agent_config = config
-                .agents
-                .iter()
-                .find(|a| a.name == agent_name)
-                .ok_or_else(|| format!("Agent '{}' not found", agent_name))?;
-            agent_config.enabled
-        };
-
-        if !agent_enabled {
-            warn!("Agent '{}' is not enabled, skipping", agent_name);
-            continue;
+        if let Some(entry) = settings.get_config_mut().skill_states.get_mut(&skill_id) {
+            if !entry.open.iter().any(|n| n == &agent_name) {
+                entry.open.push(agent_name.clone());
+            }
         }
-
-        // 添加到 open 列表
-        let skill_states = &mut settings.get_config_mut().skill_states;
-        let skill_state = skill_states
-            .get_mut(&skill_id)
-            .ok_or_else(|| format!("Skill '{}' not found in states", skill_id))?;
-
-        // 添加到 open 列表
-        if !skill_state.open.contains(&agent_name) {
-            skill_state.open.push(agent_name.clone());
-        }
-
-        info!("Enabled skill '{}' for agent '{}'", skill_id, agent_name);
     }
 
     settings
         .save()
         .map_err(|e| format!("Failed to save config: {}", e))?;
 
+    info!("Enabled skill '{}' for agent '{}'", skill_id, agent_name);
     Ok(())
+}
+
+/// 链接校准报告
+#[derive(Debug, Default, serde::Serialize)]
+pub struct RepairReport {
+    /// 重建的缺失链接数
+    pub relinked: u32,
+    /// 清除的多余链接数
+    pub removed: u32,
+    /// 已经正确、无需处理的项数
+    pub skipped: u32,
+    /// 失败详情
+    pub errors: Vec<String>,
+}
+
+/// 某个 agent 下某个 skill 的链接路径
+fn agent_skill_path(agent: &AgentConfig, skill_id: &str) -> Option<PathBuf> {
+    expand_tilde_path(&agent.path).map(|base| base.join(&agent.skills_path).join(skill_id))
+}
+
+/// 是否为「指向中央仓库」的托管链接（自然目录、用户自建目录一律不算）。
+fn is_managed_link(path: &Path) -> bool {
+    if !is_junction_or_symlink(path) {
+        return false;
+    }
+    let central = AppSettingsManager::get_skills_dir();
+    match (fs::canonicalize(path), fs::canonicalize(&central)) {
+        (Ok(resolved), Ok(central_path)) => resolved.starts_with(central_path),
+        _ => false,
+    }
+}
+
+/// 按 `skill_states[].open` 校准磁盘链接：
+/// - `open` 里列出但没有链接 → 重建
+/// - 不在 `open`、且是指向中央仓库的残留链接 → 删除
+/// 绝不删除真实目录或用户自建副本。
+#[tauri::command]
+pub async fn repair_skill_links(state: State<'_, AppState>) -> Result<RepairReport, String> {
+    info!("Repairing skill links...");
+
+    let mut settings = state
+        .settings_manager
+        .lock()
+        .map_err(|e| format!("Failed to acquire lock: {}", e))?;
+
+    let skills = scan_only(&mut settings)?;
+    let config = settings.get_config().clone();
+    let linker = LinkManager::new(config.linking_strategy.clone());
+    let skills_base = dummy_skills_base();
+    let mut report = RepairReport::default();
+
+    for skill in &skills {
+        let Some(entry) = settings.get_config().skill_states.get(&skill.id).cloned() else {
+            continue;
+        };
+
+        // 1) 补齐 open 中缺失的链接
+        for agent_name in entry.open.iter() {
+            let Some(agent_config) = config.agents.iter().find(|a| &a.name == agent_name) else {
+                report.skipped += 1;
+                continue;
+            };
+            if is_native(&entry, agent_name) {
+                report.skipped += 1;
+                continue;
+            }
+            let link_path = agent_skill_path(agent_config, &skill.id);
+            let already_linked = link_path.as_deref().map(is_managed_link).unwrap_or(false);
+            if already_linked {
+                report.skipped += 1;
+                continue;
+            }
+            match linker.link_skill_to_agent(skill, agent_config, &skills_base) {
+                Ok(_) => report.relinked += 1,
+                Err(e) => report
+                    .errors
+                    .push(format!("{} → {}: {}", skill.id, agent_name, e)),
+            }
+        }
+
+        // 2) 清除不在 open 里的残留托管链接
+        for agent_config in config.agents.iter().filter(|a| a.enabled && a.detected) {
+            if entry.open.iter().any(|n| n == &agent_config.name) {
+                continue;
+            }
+            if is_native(&entry, &agent_config.name) {
+                continue;
+            }
+            let Some(link_path) = agent_skill_path(agent_config, &skill.id) else {
+                continue;
+            };
+            if !is_managed_link(&link_path) {
+                continue;
+            }
+            match crate::linker::remove_link(&link_path) {
+                Ok(()) => report.removed += 1,
+                Err(e) => report.errors.push(format!(
+                    "{} → {}: {}",
+                    skill.id, agent_config.name, e
+                )),
+            }
+        }
+    }
+
+    settings
+        .save()
+        .map_err(|e| format!("Failed to save config: {}", e))?;
+    invalidate_skills_cache(&state);
+
+    info!(
+        "Repair done: relinked={}, removed={}, skipped={}, errors={}",
+        report.relinked,
+        report.removed,
+        report.skipped,
+        report.errors.len()
+    );
+    Ok(report)
 }

@@ -117,6 +117,7 @@
       "nativeAgentWarning": "属于 {{agent}} 原生目录，无法一键关闭",
       "skillDeleted": "技能「{{name}}」已删除",
       "skillDeleteFailed": "删除技能失败",
+      "skillAgentToggleFailed": "技能「{{skill}}」在 {{agent}} 上操作失败，已回滚",
       "skillDeletedFrom": "技能「{{name}}」已从 {{sources}} 删除",
       "skillDeleteFromFailed": "技能「{{name}}」从 {{sources}} 删除失败",
       "skillCopiedToRoot": "技能「{{name}}」已拷贝到根目录",
@@ -506,7 +507,14 @@
       "modeLabel": "高阶模式",
       "disabledHint": "默认关闭，仅可删除 Skills Manager 根目录下的技能",
       "enabledHint": "已开启，可对所有来源的技能执行删除操作",
-      "warning": "开启高阶模式后，详情页面将出现删除按钮，可删除来自 Cursor、Claude 等 Agent 原生目录的技能。"
+      "warning": "开启高阶模式后，详情页面将出现删除按钮，可删除来自 Cursor、Claude 等 Agent 原生目录的技能。",
+      "repairLinks": "校准技能链接",
+      "repairLinksHint": "按各技能的启用状态重建缺失的链接，并清理已停用却残留的链接；不会删除真实目录或用户自建副本。",
+      "repairLinksAction": "开始校准",
+      "repairLinksRunning": "校准中…",
+      "repairLinksDone": "校准完成：重建 {{relinked}} 个链接，清理 {{removed}} 个残留",
+      "repairLinksPartial": "校准完成，但有 {{failed}} 项失败：重建 {{relinked}}，清理 {{removed}}",
+      "repairLinksFailed": "校准失败"
     },
     "previewLocked": {
       "agentsTitle": "Agent 管理仅桌面端可用",

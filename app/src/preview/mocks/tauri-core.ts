@@ -12,7 +12,7 @@
 
 import type { SkillMetadata, AppConfig, AgentConfig, GitHubConfig, SkillFileEntry, LinkType } from '@/types';
 import { PREVIEW_SKILLS, PREVIEW_SKILL_CONTENT } from '../data/skills';
-import { PREVIEW_AGENTS, PREVIEW_APP_CONFIG } from '../data/agents';
+import { PREVIEW_APP_CONFIG } from '../data/agents';
 
 const STORAGE_KEY = 'preview:skills-v2';
 const CONFIG_KEY = 'preview:config-v2';
@@ -83,14 +83,11 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown | Prom
     const sk = findSkill(String(skillId));
     if (!sk) throw new Error(`Skill ${skillId} not found`);
     if (!agent) {
-      // 全部开启：所有已声明的 agent 都加进 open
-      for (const a of PREVIEW_AGENTS.map((x) => x.name)) {
-        if (!sk.open.includes(a) && !sk.sources.includes(a)) sk.open.push(a);
-      }
-    } else {
-      const a = String(agent);
-      if (!sk.open.includes(a) && !sk.sources.includes(a)) sk.open.push(a);
+      // 与后端一致：agent 必填，不再支持一键广播到所有 agent
+      throw new Error('agent 参数必填');
     }
+    const a = String(agent);
+    if (!sk.open.includes(a) && !sk.sources.includes(a)) sk.open.push(a);
     recomputeAgentEnabled(sk);
     persist();
     return simulateLatency(undefined);
@@ -100,15 +97,16 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown | Prom
     const sk = findSkill(String(skillId));
     if (!sk) throw new Error(`Skill ${skillId} not found`);
     if (!agent) {
-      sk.open = [];
-    } else {
-      const a = String(agent);
-      sk.open = sk.open.filter((x) => x !== a);
+      throw new Error('agent 参数必填');
     }
+    const a = String(agent);
+    sk.open = sk.open.filter((x) => x !== a);
     recomputeAgentEnabled(sk);
     persist();
     return simulateLatency(undefined);
   },
+
+  repair_skill_links: () => simulateLatency({ relinked: 0, removed: 0, skipped: 0, errors: [] }),
 
   set_skill_primary: ({ skillId, newPrimary }) => {
     const sk = findSkill(String(skillId));

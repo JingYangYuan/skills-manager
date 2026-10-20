@@ -110,6 +110,7 @@
       "nativeAgentWarning": "Belongs to {{agent}} native directory, cannot be disabled",
       "skillDeleted": "Skill \"{{name}}\" has been deleted",
       "skillDeleteFailed": "Failed to delete skill",
+      "skillAgentToggleFailed": "Failed to update \"{{skill}}\" on {{agent}}, changes reverted",
       "skillDeletedFrom": "Skill \"{{name}}\" has been deleted from {{sources}}",
       "skillDeleteFromFailed": "Failed to delete skill \"{{name}}\" from {{sources}}",
       "skillCopiedToRoot": "Skill \"{{name}}\" has been copied to root directory",
@@ -488,7 +489,14 @@
       "modeLabel": "Advanced Mode",
       "disabledHint": "Off by default. Only skills in the Skills Manager root directory can be deleted.",
       "enabledHint": "Enabled. You can delete skills from any source.",
-      "warning": "With Advanced Mode on, a delete button will appear on detail pages for all skills, including those from Cursor, Claude, and other agents' native directories."
+      "warning": "With Advanced Mode on, a delete button will appear on detail pages for all skills, including those from Cursor, Claude, and other agents' native directories.",
+      "repairLinks": "Repair skill links",
+      "repairLinksHint": "Rebuild missing links based on each skill's enabled state and clean up stale links from disabled agents. Real directories and user-created copies are never deleted.",
+      "repairLinksAction": "Repair now",
+      "repairLinksRunning": "Repairing…",
+      "repairLinksDone": "Repair finished: {{relinked}} relinked, {{removed}} cleaned up",
+      "repairLinksPartial": "Repair finished with {{failed}} failure(s): {{relinked}} relinked, {{removed}} cleaned up",
+      "repairLinksFailed": "Repair failed"
     },
     "previewLocked": {
       "agentsTitle": "Agent management is desktop-only",

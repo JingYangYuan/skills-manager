@@ -296,6 +296,13 @@ pub fn scan_and_merge(
             group.iter().map(|d| d.source.as_str()).collect();
         entry.sources.retain(|s| existing.contains(s.as_str()));
         entry.ensure_valid_primary();
+        // 裁剪 open：只保留「已知 agent」且「非原生来源（sources 里已有物理副本）」的项，
+        // 避免已删除/已移除的 agent 永远残留在状态里。
+        let native: std::collections::HashSet<&str> =
+            entry.sources.iter().map(|s| s.as_str()).collect();
+        entry
+            .open
+            .retain(|a| agent_names.contains(a) && !native.contains(a.as_str()));
     }
 
     // 2) 删除孤儿：skill_states 里但本次扫描完全没发现物理副本的 id

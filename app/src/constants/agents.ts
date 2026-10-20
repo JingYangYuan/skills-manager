@@ -8,7 +8,6 @@ import traeIcon from '@/assets/agents/trae.svg';
 import qoderIcon from '@/assets/agents/qoder.svg';
 import antigravityIcon from '@/assets/agents/antigravity.svg';
 import kiroIcon from '@/assets/agents/kiro.svg';
-import agentsIcon from '@/assets/agents/agents.svg';
 import copilotIcon from '@/assets/agents/copilot.svg';
 import workbuddyIcon from '@/assets/agents/workbuddy.svg';
 import zcodeIcon from '@/assets/agents/zcode.svg';
@@ -72,13 +71,6 @@ const AGENT_META = {
     rootPath: '~/.codex',
     icon: gptIcon,
     invertInDark: true,
-  },
-  agents: {
-    name: 'agents',
-    shortName: 'Agents',
-    displayName: 'Universal Agents',
-    rootPath: '~/.agents',
-    icon: agentsIcon,
   },
   copilot: {
     name: 'copilot',

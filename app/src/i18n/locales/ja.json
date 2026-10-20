@@ -109,6 +109,7 @@
       "nativeAgentWarning": "{{agent}}のネイティブディレクトリに属しているため、無効にできません",
       "skillDeleted": "スキル「{{name}}」を削除しました",
       "skillDeleteFailed": "スキルの削除に失敗しました",
+      "skillAgentToggleFailed": "スキル「{{skill}}」の {{agent}} 向け操作に失敗しました。変更を元に戻しました",
       "skillDeletedFrom": "スキル「{{name}}」を{{sources}}から削除しました",
       "skillDeleteFromFailed": "スキル「{{name}}」を{{sources}}から削除できませんでした",
       "skillCopiedToRoot": "スキル「{{name}}」をルートディレクトリにコピーしました",
@@ -488,7 +489,14 @@
       "modeLabel": "詳細モード",
       "disabledHint": "デフォルトでオフ。Skills Managerルートディレクトリのスキルのみを削除できます。",
       "enabledHint": "有効。すべてのソースのスキルを削除できます。",
-      "warning": "詳細モードをオンにすると、詳細ページに削除ボタンが表示され、Cursor、Claude、その他のAgentのネイティブディレクトリからのスキルを含むすべてのスキルを削除できます。"
+      "warning": "詳細モードをオンにすると、詳細ページに削除ボタンが表示され、Cursor、Claude、その他のAgentのネイティブディレクトリからのスキルを含むすべてのスキルを削除できます。",
+      "repairLinks": "スキルリンクを修復",
+      "repairLinksHint": "各スキルの有効状態に基づいて不足しているリンクを再構築し、無効化されたエージェントの残リンクを整理します。実ディレクトリやユーザー作成コピーは削除しません。",
+      "repairLinksAction": "修復を実行",
+      "repairLinksRunning": "修復中…",
+      "repairLinksDone": "修復完了：{{relinked}} 件を再リンク、{{removed}} 件を整理",
+      "repairLinksPartial": "修復完了（{{failed}} 件失敗）：再リンク {{relinked}}、整理 {{removed}}",
+      "repairLinksFailed": "修復に失敗しました"
     },
     "previewLocked": {
       "agentsTitle": "Agent管理はデスクトップのみ",

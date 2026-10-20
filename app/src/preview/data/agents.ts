@@ -41,14 +41,6 @@ export const PREVIEW_AGENTS: AgentConfig[] = [
     detected: true,
   },
   {
-    name: 'agents',
-    display_name: 'Universal Agents',
-    path: '~/.agents',
-    skills_path: 'skills',
-    enabled: true,
-    detected: true,
-  },
-  {
     name: 'copilot',
     display_name: 'GitHub Copilot',
     path: '~/.copilot',

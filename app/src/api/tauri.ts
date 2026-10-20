@@ -1,17 +1,30 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { SkillMetadata, GitHubConfig, AgentConfig, AppConfig, SkillFileEntry, LinkType } from '@/types';
 
+/** 链接校准报告（对应后端 RepairReport） */
+export interface RepairReport {
+  relinked: number;
+  removed: number;
+  skipped: number;
+  errors: string[];
+}
+
 export const skillsApi = {
   list: async (): Promise<SkillMetadata[]> => {
     return await invoke<SkillMetadata[]>('list_skills');
   },
 
-  enable: async (skillId: string, agent?: string): Promise<void> => {
+  enable: async (skillId: string, agent: string): Promise<void> => {
     await invoke('enable_skill', { skillId, agent });
   },
 
-  disable: async (skillId: string, agent?: string): Promise<void> => {
+  disable: async (skillId: string, agent: string): Promise<void> => {
     await invoke('disable_skill', { skillId, agent });
+  },
+
+  /** 按 skill_states[].open 校准磁盘链接，返回修复报告 */
+  repairLinks: async (): Promise<RepairReport> => {
+    return await invoke<RepairReport>('repair_skill_links');
   },
 
   setPrimary: async (skillId: string, newPrimary: string): Promise<void> => {

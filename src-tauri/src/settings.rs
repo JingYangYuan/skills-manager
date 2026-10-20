@@ -1,3 +1,4 @@
+use crate::linker::{is_junction_or_symlink, remove_link};
 use crate::models::{AgentConfig, AppConfig, LinkStrategy, CURRENT_SCHEMA_VERSION};
 use chrono::Local;
 use std::fs;
@@ -39,6 +40,70 @@ fn backup_invalid_config(config_path: &Path, content: &str, error: &serde_json::
             backup_path, write_err
         );
     }
+}
+
+/// 从 skill_states 中清除对已删除预设的引用（sources / open）。
+/// 返回是否发生了变更。
+fn prune_deprecated_agent_refs(config: &mut AppConfig, removed: &[&str]) -> bool {
+    let mut changed = false;
+    for entry in config.skill_states.values_mut() {
+        let before = (entry.sources.len(), entry.open.len());
+        entry.sources.retain(|s| !removed.contains(&s.as_str()));
+        entry.open.retain(|s| !removed.contains(&s.as_str()));
+        if (entry.sources.len(), entry.open.len()) != before {
+            changed = true;
+        }
+        entry.ensure_valid_primary();
+    }
+    changed
+}
+
+/// 一次性清理：移除 `~/.agents/skills` 下由本应用创建的托管链接。
+///
+/// 只删除「本身是 symlink/junction 且指向 `~/.skills-manager/skills`」的条目；
+/// 用户自装技能、普通目录、`.skill-lock.json` 等一律保留。
+/// 返回 (已删除数量, 错误描述列表)，失败不阻断启动。
+pub(crate) fn purge_managed_links_in(home: &Path) -> (u32, Vec<String>) {
+    let mut removed = 0u32;
+    let mut errors = Vec::new();
+
+    let central = home.join(".skills-manager").join("skills");
+    let target_dir = home.join(".agents").join("skills");
+    if !target_dir.is_dir() {
+        return (removed, errors);
+    }
+
+    let Ok(entries) = fs::read_dir(&target_dir) else {
+        errors.push(format!("cannot read {}", target_dir.display()));
+        return (removed, errors);
+    };
+
+    let central_canonical = fs::canonicalize(&central).ok();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !is_junction_or_symlink(&path) {
+            continue;
+        }
+
+        // 目标落在中央仓库内 → 是本应用创建的托管链接；
+        // 链接已断（无法 canonicalize）时退而比较同名目录是否存在于中央仓库。
+        let points_to_central = match (fs::canonicalize(&path), central_canonical.as_ref()) {
+            (Ok(resolved), Some(central_path)) => resolved.starts_with(central_path),
+            _ => false,
+        };
+        let same_name_as_central = central.join(entry.file_name()).is_dir();
+        if !points_to_central && !same_name_as_central {
+            continue;
+        }
+
+        match remove_link(&path) {
+            Ok(()) => removed += 1,
+            Err(error) => errors.push(format!("{}: {}", path.display(), error)),
+        }
+    }
+
+    (removed, errors)
 }
 
 #[derive(Debug, Error)]
@@ -106,15 +171,6 @@ impl AppSettingsManager {
                 enabled: true,
                 detected: false,
                 extra_paths: vec![],
-            },
-            AgentConfig {
-                name: "agents".to_string(),
-                display_name: "Universal Agents".to_string(),
-                path: "~/.agents".to_string(),
-                skills_path: "skills".to_string(),
-                enabled: true,
-                detected: false,
-                extra_paths: vec!["~/.config/agents".to_string()],
             },
             AgentConfig {
                 name: "copilot".to_string(),
@@ -291,7 +347,13 @@ impl AppSettingsManager {
             write_default_config(config_path)?
         };
 
-        const REMOVED_PRESETS: &[&str] = &["trae-cn", "commandcode", "lingma", "arkcli"];
+        // `agents`（Universal Agents，~/.agents）是所有 CLI 共享的目录，
+        // 一旦参与批量启用就会把技能散播到所有工具，因此彻底移除该预设。
+        const REMOVED_PRESETS: &[&str] = &["trae-cn", "commandcode", "lingma", "arkcli", "agents"];
+        let had_universal_agents = config
+            .agents
+            .iter()
+            .any(|agent| agent.name == "agents");
         let before_len = config.agents.len();
         config
             .agents
@@ -302,6 +364,27 @@ impl AppSettingsManager {
                 "[settings] removed deprecated agents: {:?}",
                 REMOVED_PRESETS
             );
+        }
+        if prune_deprecated_agent_refs(&mut config, REMOVED_PRESETS) {
+            config_updated = true;
+        }
+        if had_universal_agents {
+            let (removed_links, errors) = match dirs::home_dir() {
+                Some(home) => purge_managed_links_in(&home),
+                None => (
+                    0,
+                    vec!["cannot resolve home directory".to_string()],
+                ),
+            };
+            if removed_links > 0 {
+                eprintln!(
+                    "[settings] removed {} managed link(s) from ~/.agents/skills",
+                    removed_links
+                );
+            }
+            for error in errors {
+                eprintln!("[settings] ~/.agents cleanup skipped {:?}", error);
+            }
         }
 
         for preset in Self::known_agent_presets() {

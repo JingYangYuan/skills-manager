@@ -261,6 +261,9 @@ pub async fn restore_from_github(
         if let Err(e) = crate::tray::rebuild_tray_menu(&app, &lang) {
             log::warn!("restore_from_github: rebuild_tray_menu failed: {}", e);
         }
+        if let Ok(mut cache) = state.skills_cache.lock() {
+            *cache = None;
+        }
     }
 
     Ok(count)

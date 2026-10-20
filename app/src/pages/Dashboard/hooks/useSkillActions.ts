@@ -7,6 +7,7 @@ import { trackEvent } from '@/lib/telemetry';
 import type { SkillMetadata, AgentConfig } from '@/types';
 import { SOURCE } from '@/pages/Dashboard/utils/source';
 import { appendOperationLog } from '@/pages/Dashboard/hooks/useOperationLog';
+import { useVisibleAgents } from './useVisibleAgents';
 
 // Schema v2：同一 skill_id 只有一条记录，直接按 id 比对
 const matchSkill = (s: SkillMetadata, skill: SkillMetadata) => s.id === skill.id;
@@ -19,9 +20,10 @@ export const useSkillActions = (
   const { t } = useTranslation();
   const { showToast } = useToast();
 
-  // 获取所有可用的 agent 名称
-  const availableAgents = agents
-    .filter(agent => agent.detected && agent.enabled)
+  // 主开关的作用域 = Dashboard 当前可见的 agent（已检测且未被用户隐藏），
+  // 不再把技能自动散播到所有已安装的 CLI。
+  const availableAgents = useVisibleAgents(agents)
+    .filter(agent => agent.enabled)
     .map(agent => agent.name);
 
   const handleToggleAgent = useCallback(async (skill: SkillMetadata, agentName: string) => {
@@ -57,6 +59,15 @@ export const useSkillActions = (
           trackEvent(TelemetryEvent.SKILL_AGENT_DISABLED, { skill_id: skill.id, agent: agentName });
         }).catch(error => {
           console.error('Failed to disable skill:', error);
+          // 回滚乐观更新并提示用户，避免卡片状态与磁盘不一致
+          setSkills(prevSkills =>
+            prevSkills.map(s =>
+              matchSkill(s, skill)
+                ? { ...s, agent_enabled: { ...s.agent_enabled, [agentName]: true } }
+                : s
+            )
+          );
+          showToast('error', t('dashboard.toast.skillAgentToggleFailed', { skill: skill.name, agent: agentName }));
         });
       } else {
         console.log(`Enabling skill ${skill.name} for agent ${agentName}`);
@@ -74,12 +85,20 @@ export const useSkillActions = (
           }
         }).catch(error => {
           console.error('Failed to enable skill:', error);
+          setSkills(prevSkills =>
+            prevSkills.map(s =>
+              matchSkill(s, skill)
+                ? { ...s, agent_enabled: { ...s.agent_enabled, [agentName]: false } }
+                : s
+            )
+          );
+          showToast('error', t('dashboard.toast.skillAgentToggleFailed', { skill: skill.name, agent: agentName }));
         });
       }
     } catch (error) {
       console.error('Failed to toggle agent:', error);
     }
-  }, [setSkills]);
+  }, [setSkills, showToast, t]);
 
   /**
    * 合并卡片主开关（三态视觉：off / partial / on）。
@@ -110,11 +129,18 @@ export const useSkillActions = (
     );
 
     const alreadyInRoot = (skill.sources ?? []).includes(SOURCE.Global);
-    togglableAgents.forEach(agent => {
-      const op = shouldEnable
-        ? skillsApi.enable(skill.id, agent)
-        : skillsApi.disable(skill.id, agent);
-      op.then(() => {
+    const results = await Promise.allSettled(
+      togglableAgents.map(agent =>
+        shouldEnable
+          ? skillsApi.enable(skill.id, agent)
+          : skillsApi.disable(skill.id, agent)
+      )
+    );
+
+    const failedAgents: string[] = [];
+    results.forEach((result, idx) => {
+      const agent = togglableAgents[idx];
+      if (result.status === 'fulfilled') {
         trackEvent(
           shouldEnable ? TelemetryEvent.SKILL_ENABLED : TelemetryEvent.SKILL_DISABLED,
           { skill_id: skill.id, agent },
@@ -127,11 +153,28 @@ export const useSkillActions = (
             source: skill.primary,
           });
         }
-      }).catch(err => {
-        console.error(`Failed to ${shouldEnable ? 'enable' : 'disable'} ${skill.id}/${agent}:`, err);
-      });
+      } else {
+        console.error(`Failed to toggle ${skill.id}/${agent}:`, result.reason);
+        failedAgents.push(agent);
+      }
     });
-  }, [setSkills, availableAgents]);
+
+    // 失败的 agent 回滚到切换前的状态，并给出可见的错误提示
+    if (failedAgents.length > 0) {
+      setSkills(prevSkills =>
+        prevSkills.map(s => {
+          if (!matchSkill(s, skill)) return s;
+          const nextAgentEnabled = { ...(s.agent_enabled ?? {}) };
+          failedAgents.forEach(agent => { nextAgentEnabled[agent] = !shouldEnable; });
+          return { ...s, agent_enabled: nextAgentEnabled };
+        })
+      );
+      showToast(
+        'error',
+        t('dashboard.toast.skillAgentToggleFailed', { skill: skill.name, agent: failedAgents.join(', ') }),
+      );
+    }
+  }, [setSkills, availableAgents, showToast, t]);
 
   /** 合并卡片：toggle 某个 agent（原生 agent 禁止关闭） */
   const handleToggleAgentMerged = useCallback(async (skill: SkillMetadata, agentName: string) => {

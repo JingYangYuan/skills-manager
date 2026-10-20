@@ -168,13 +168,30 @@ pub fn run() {
             let skill_states = config.skill_states.clone();
             let agents = config.agents.clone();
 
-            log::info!("Prewarming skill scan during startup");
-            let _skills =
-                scanner::scan_all_skill_sources(&skill_states, &agents).unwrap_or_default();
-
             app.manage(AppState {
                 settings_manager: Mutex::new(settings_manager),
+                skills_cache: Mutex::new(None),
             });
+
+            // 预热扫描放到后台线程，避免阻塞窗口首帧；
+            // 结果写入 skills_cache，首个页面加载即可命中。
+            {
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    log::info!("Prewarming skill scan in background");
+                    match scanner::scan_all_skill_sources(&skill_states, &agents) {
+                        Ok(skills) => {
+                            if let Some(state) = handle.try_state::<AppState>() {
+                                if let Ok(mut cache) = state.skills_cache.lock() {
+                                    *cache = Some(skills);
+                                }
+                            }
+                            log::info!("Prewarm scan finished");
+                        }
+                        Err(e) => log::warn!("Prewarm scan failed: {}", e),
+                    }
+                });
+            }
 
             let lang = config.language.clone();
             if let Some(icon) = app.default_window_icon().cloned() {
@@ -256,6 +273,7 @@ pub fn run() {
             commands::skills::delete_skill,
             commands::skills::import_skill_folder,
             commands::skills::copy_skill_to_agent,
+            commands::skills::repair_skill_links,
             commands::marketplace::fetch_marketplace_skills,
             commands::marketplace::fetch_skill_detail,
             commands::marketplace::fetch_marketplace_skill_content,

@@ -328,4 +328,80 @@ mod tests {
         assert!(!entry.open.iter().any(|s| s == "test-agent"));
         assert!(entry.sources.iter().any(|s| s == "global"));
     }
+
+    #[test]
+    fn test_load_migrates_away_from_universal_agents() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+
+        // 旧版配置：带 agents（Universal Agents）预设 + open/sources 引用
+        let legacy = r#"{
+            "schema_version": "v1",
+            "linking_strategy": "symlink",
+            "agents": [
+                {"name":"claude","display_name":"Claude Code","path":"~/.claude","skills_path":"skills","enabled":true,"detected":false,"extra_paths":[]},
+                {"name":"agents","display_name":"Universal Agents","path":"~/.agents","skills_path":"skills","enabled":true,"detected":true,"extra_paths":["~/.config/agents"]}
+            ],
+            "skill_states": {
+                "demo": {"sources":["global","agents"],"primary":"agents","open":["agents","claude"]}
+            },
+            "language": "zh"
+        }"#;
+        std::fs::write(&config_path, legacy).unwrap();
+
+        let manager = crate::settings::AppSettingsManager::load_or_create(&config_path).unwrap();
+        let config = manager.get_config();
+
+        // agents 预设被移除，且 preset 同步逻辑不会把它加回来
+        assert!(config.agents.iter().all(|a| a.name != "agents"));
+
+        // skill_states 中的引用被裁剪，primary 重新选择合法值
+        let entry = config.skill_states.get("demo").unwrap();
+        assert_eq!(entry.sources, vec!["global".to_string()]);
+        assert_eq!(entry.open, vec!["claude".to_string()]);
+        assert_eq!(entry.primary, "global");
+    }
+
+    #[test]
+    fn test_purge_managed_links_only_removes_links_into_central() {
+        use std::fs;
+
+        let temp_dir = TempDir::new().unwrap();
+        let home = temp_dir.path();
+
+        // 中央仓库里放一个真实技能
+        let central_skill = home.join(".skills-manager/skills/demo");
+        fs::create_dir_all(&central_skill).unwrap();
+        fs::write(central_skill.join("SKILL.md"), "---\nname: demo\n---\n").unwrap();
+
+        // ~/.agents/skills：一个托管链接 + 一个用户自装真实目录 + 一个无关文件
+        let agents_skills = home.join(".agents/skills");
+        fs::create_dir_all(&agents_skills).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&central_skill, agents_skills.join("demo")).unwrap();
+        #[cfg(windows)]
+        {
+            // Junction 无需特权，但这里用 symlink；开发者模式不可用时跳过断言
+            if std::os::windows::fs::symlink_dir(&central_skill, agents_skills.join("demo")).is_err()
+            {
+                return;
+            }
+        }
+
+        let user_skill = agents_skills.join("user-own-skill");
+        fs::create_dir_all(&user_skill).unwrap();
+        fs::write(user_skill.join("SKILL.md"), "---\nname: user\n---\n").unwrap();
+        fs::write(agents_skills.join(".skill-lock.json"), "{}").unwrap();
+
+        let (removed, errors) = crate::settings::purge_managed_links_in(home);
+        assert_eq!(removed, 1);
+        assert!(errors.is_empty());
+        assert!(!agents_skills.join("demo").exists());
+        assert!(user_skill.exists());
+        assert!(agents_skills.join(".skill-lock.json").exists());
+
+        // 幂等：第二次运行为 no-op
+        let (removed2, _) = crate::settings::purge_managed_links_in(home);
+        assert_eq!(removed2, 0);
+    }
 }

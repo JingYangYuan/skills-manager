@@ -116,6 +116,7 @@
       "nativeAgentWarning": "屬於 {{agent}} 原生目錄，無法一鍵關閉",
       "skillDeleted": "技能「{{name}}」已刪除",
       "skillDeleteFailed": "刪除技能失敗",
+      "skillAgentToggleFailed": "技能「{{skill}}」在 {{agent}} 上操作失敗，已回滾",
       "skillDeletedFrom": "技能「{{name}}」已從 {{sources}} 刪除",
       "skillDeleteFromFailed": "技能「{{name}}」從 {{sources}} 刪除失敗",
       "skillCopiedToRoot": "技能「{{name}}」已拷貝到根目錄",
@@ -506,7 +507,14 @@
       "modeLabel": "進階模式",
       "disabledHint": "預設關閉，僅可刪除 Skills Manager 根目錄下的技能",
       "enabledHint": "已開啟，可對所有來源的技能執行刪除操作",
-      "warning": "開啟進階模式後，詳情頁面將出現刪除按鈕，可刪除來自 Cursor、Claude 等 Agent 原生目錄的技能。"
+      "warning": "開啟進階模式後，詳情頁面將出現刪除按鈕，可刪除來自 Cursor、Claude 等 Agent 原生目錄的技能。",
+      "repairLinks": "校準技能連結",
+      "repairLinksHint": "按各技能的啟用狀態重建缺失的連結，並清理已停用卻殘留的連結；不會刪除真實目錄或使用者自建副本。",
+      "repairLinksAction": "開始校準",
+      "repairLinksRunning": "校準中…",
+      "repairLinksDone": "校準完成：重建 {{relinked}} 個連結，清理 {{removed}} 個殘留",
+      "repairLinksPartial": "校準完成，但有 {{failed}} 項失敗：重建 {{relinked}}，清理 {{removed}}",
+      "repairLinksFailed": "校準失敗"
     },
     "previewLocked": {
       "agentsTitle": "Agent 管理僅桌面端可用",

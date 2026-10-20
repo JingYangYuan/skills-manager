@@ -71,4 +71,50 @@ mod tests {
         let mut _states: HashMap<String, SkillEntry> = HashMap::new();
         // 只调用到 models 层，避免扫描全局目录。
     }
+
+    #[test]
+    fn test_scan_and_merge_prunes_stale_open() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let skills_dir = tmp.path().join("skills");
+        create_test_skill(
+            &skills_dir,
+            "demo",
+            "---\nname: demo\ndescription: d\ncategory: Test\n---\nBody",
+        );
+
+        // 绝对路径不会被 ~ 展开，直接指向临时目录
+        let agents = vec![crate::models::AgentConfig {
+            name: "pi".to_string(),
+            display_name: "Pi".to_string(),
+            path: tmp.path().to_string_lossy().to_string(),
+            skills_path: "skills".to_string(),
+            enabled: true,
+            detected: true,
+            extra_paths: vec![],
+        }];
+
+        let mut states: HashMap<String, SkillEntry> = HashMap::new();
+        states.insert(
+            "demo".to_string(),
+            SkillEntry {
+                sources: vec!["global".to_string()],
+                primary: "global".to_string(),
+                // removed-agent 不在 agents 列表；omp 不在 agents 列表；
+                // pi 有真实物理副本 → 扫描后成为 native，open 应被裁剪
+                open: vec![
+                    "removed-agent".to_string(),
+                    "omp".to_string(),
+                    "pi".to_string(),
+                ],
+            },
+        );
+
+        let out = crate::scanner::scan_and_merge(&mut states, &agents).unwrap();
+        let entry = states.get("demo").unwrap();
+        assert!(entry.open.is_empty(), "stale open entries should be pruned");
+
+        let meta = out.iter().find(|s| s.id == "demo").unwrap();
+        // pi 变为 native（物理副本），仍应通过 sources 派生为启用
+        assert_eq!(meta.agent_enabled.get("pi"), Some(&true));
+    }
 }
