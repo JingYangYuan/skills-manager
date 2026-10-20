@@ -194,9 +194,9 @@ pub fn plan_consolidation(
         }
     }
 
-    // extra_paths 不参与归并，但逐条列出让用户知情
+    // extra_paths 不参与归并，但逐条列出让用户知情（路径语义与扫描器一致：extra_path/skills_path）
     for extra in &agent.extra_paths {
-        let dir = expand_path(extra, home);
+        let dir = expand_path(extra, home).join(&agent.skills_path);
         if let Ok(entries) = fs::read_dir(&dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
