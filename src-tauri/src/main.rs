@@ -2,12 +2,14 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 mod commands;
+mod consolidate;
 mod github;
 mod linker;
 mod models;
 mod scanner;
 mod settings;
 mod state;
+mod trash;
 mod tray;
 
 use chrono::Local;
@@ -274,6 +276,14 @@ pub fn run() {
             commands::skills::import_skill_folder,
             commands::skills::copy_skill_to_agent,
             commands::skills::repair_skill_links,
+            commands::skills::list_trash,
+            commands::skills::restore_trash,
+            commands::skills::purge_trash_entry,
+            commands::skills::empty_trash,
+            commands::skills::batch_delete_skills,
+            commands::skills::batch_toggle_skills,
+            commands::skills::plan_agent_consolidation,
+            commands::skills::apply_agent_consolidation,
             commands::marketplace::fetch_marketplace_skills,
             commands::marketplace::fetch_skill_detail,
             commands::marketplace::fetch_marketplace_skill_content,

@@ -10,6 +10,7 @@ import { AgentsSection } from './components/AgentsSection';
 import { SkillFilterSection } from './components/SkillFilterSection';
 import { AboutSection } from './components/AboutSection';
 import { AdvancedSection } from './components/AdvancedSection';
+import { TrashSection } from './components/TrashSection';
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '@/lib/tauri-env';
 import { SESSION_STORAGE_KEYS, LOCAL_STORAGE_KEYS, WINDOW_EVENTS } from '@/constants';
@@ -124,6 +125,7 @@ function Settings() {
                   onToggle={handleAdvancedModeToggle}
                 />
                 <SkillFilterSection />
+                <TrashSection />
               </>
             )}
 

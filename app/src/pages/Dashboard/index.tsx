@@ -6,7 +6,7 @@ import { SESSION_STORAGE_KEYS } from '@/constants';
 import { FILTER_TYPE } from '@/pages/Dashboard/constants/filterType';
 import { SOURCE, isSource } from '@/pages/Dashboard/utils/source';
 import { sortAgentsByStoredOrder } from '@/lib/agentOrder';
-import { skillsApi } from '@/api/tauri';
+import { skillsApi, trashApi } from '@/api/tauri';
 import { useHiddenAgents } from '@/hooks/useHiddenAgents';
 import { useSidebar } from '@/contexts/SidebarContext';
 
@@ -20,6 +20,7 @@ import { useDragDrop } from '@/pages/Dashboard/hooks/useDragDrop';
 import { usePanelResize } from '@/pages/Dashboard/hooks/usePanelResize';
 import { useDashboardState } from '@/pages/Dashboard/hooks/useDashboardState';
 import { useFilteredSkills } from '@/pages/Dashboard/hooks/useFilteredSkills';
+import { useSkillSelection } from '@/pages/Dashboard/hooks/useSkillSelection';
 
 // Layout Components
 import {
@@ -30,6 +31,8 @@ import {
 } from '@/pages/Dashboard/components/DashboardLayout';
 import { ResizableDetailLayout } from '@/components/ResizableDetailLayout';
 import { SkillDetailInline } from '@/pages/Dashboard/components/SkillDetailInline';
+import { ConsolidateModal } from '@/pages/Dashboard/components/ConsolidateModal';
+import { BatchDeleteConfirm } from '@/pages/Dashboard/components/BatchDeleteConfirm';
 
 // 添加抽屉动画样式
 if (typeof document !== 'undefined' && !document.getElementById('dashboard-drawer-animation')) {
@@ -236,6 +239,105 @@ function Dashboard({
 
   const { leftPanelWidth, isResizing, handleMouseDown } = usePanelResize();
 
+  // 批量管理与 Agent 一键归并
+  const selection = useSkillSelection();
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [showBatchDelete, setShowBatchDelete] = useState(false);
+  const [consolidateAgentName, setConsolidateAgentName] = useState<string | null>(null);
+
+  const selectedSkills = useMemo(
+    () => skills.filter(skill => selection.selectedSet.has(skill.id)),
+    [skills, selection.selectedSet]
+  );
+
+  const consolidateAgent = useMemo(
+    () => agents.find(a => a.name === consolidateAgentName) ?? null,
+    [agents, consolidateAgentName]
+  );
+
+  const handleSelectAllVisible = useCallback(() => {
+    selection.toggleSelectAll(filteredBySource.map(skill => skill.id));
+  }, [selection, filteredBySource]);
+
+  const handleBatchToggle = async (agent: string, enable: boolean) => {
+    const ids = selection.selectedIds;
+    if (ids.length === 0) return;
+    setBatchBusy(true);
+    try {
+      const report = await skillsApi.batchToggle(ids, agent, enable);
+      await refreshSkills();
+      const agentLabel = agents.find(a => a.name === agent)?.display_name || agent;
+      if (report.failed > 0) {
+        showToast(
+          'error',
+          t('dashboard.batch.partialFailed', {
+            ok: report.succeeded,
+            failed: report.failed,
+            error: report.errors[0] ?? '',
+          })
+        );
+      } else {
+        showToast(
+          'success',
+          t(enable ? 'dashboard.batch.enableDone' : 'dashboard.batch.disableDone', {
+            count: report.succeeded,
+            agent: agentLabel,
+          })
+        );
+      }
+      selection.clearSelection();
+    } catch (e) {
+      showToast('error', String(e));
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    const ids = selection.selectedIds;
+    if (ids.length === 0) return;
+    setBatchBusy(true);
+    try {
+      const report = await skillsApi.batchDelete(ids);
+      await refreshSkills();
+      if (report.failed.length > 0) {
+        showToast(
+          'error',
+          t('dashboard.batch.partialFailed', {
+            ok: report.deleted.length,
+            failed: report.failed.length,
+            error: report.errors[0] ?? '',
+          })
+        );
+      } else {
+        showToast(
+          'success',
+          t('dashboard.batch.deleteDone', { count: report.deleted.length }),
+          undefined,
+          report.trash_ids.length > 0
+            ? {
+                label: t('dashboard.toast.deleteUndo'),
+                onClick: async () => {
+                  try {
+                    await trashApi.restore(report.trash_ids);
+                    await refreshSkills();
+                  } catch (err) {
+                    showToast('error', String(err));
+                  }
+                },
+              }
+            : undefined
+        );
+      }
+      selection.exitSelection();
+    } catch (e) {
+      showToast('error', String(e));
+    } finally {
+      setBatchBusy(false);
+      setShowBatchDelete(false);
+    }
+  };
+
   // Handlers
   const toggleExpand = useCallback((cardKey: string) => {
     setExpandedCards(prev => {
@@ -362,6 +464,19 @@ function Dashboard({
           pinnedIds={pinnedIds}
           onContextMenu={handleCardContextMenu}
           onOpenImportModal={() => setShowImportModal(true)}
+          selectMode={selection.selectionMode}
+          selectedSet={selection.selectedSet}
+          selectionCount={selection.selectedIds.length}
+          batchBusy={batchBusy}
+          onToggleSelect={selection.toggleSelected}
+          onSelectAllVisible={handleSelectAllVisible}
+          onEnterSelection={selection.enterSelection}
+          onExitSelection={selection.exitSelection}
+          onClearSelection={selection.clearSelection}
+          onBatchEnable={agent => handleBatchToggle(agent, true)}
+          onBatchDisable={agent => handleBatchToggle(agent, false)}
+          onBatchDelete={() => setShowBatchDelete(true)}
+          onOpenConsolidate={setConsolidateAgentName}
           isDragOver={isDragOver}
           importing={importing}
           showDetailModal={showDetailModal}
@@ -400,6 +515,24 @@ function Dashboard({
         setCardContextMenu={setCardContextMenu}
         pinnedIds={pinnedIds}
         handleTogglePin={handleTogglePin}
+      />
+
+      <BatchDeleteConfirm
+        isOpen={showBatchDelete}
+        skills={selectedSkills}
+        busy={batchBusy}
+        onConfirm={handleBatchDelete}
+        onCancel={() => setShowBatchDelete(false)}
+      />
+
+      <ConsolidateModal
+        isOpen={!!consolidateAgent}
+        agent={consolidateAgent}
+        onClose={() => setConsolidateAgentName(null)}
+        onDone={async () => {
+          await refreshSkills();
+          await loadAgents();
+        }}
       />
 
       {/* Floating Actions */}

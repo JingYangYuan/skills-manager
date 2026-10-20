@@ -9,6 +9,93 @@ export interface RepairReport {
   errors: string[];
 }
 
+/** 单条批量操作结果 */
+export interface BatchDeleteReport {
+  deleted: string[];
+  failed: string[];
+  errors: string[];
+  trash_ids: string[];
+}
+
+/** 批量启用/停用汇总 */
+export interface BatchToggleReport {
+  succeeded: number;
+  failed: number;
+  errors: string[];
+}
+
+/** 回收站中的一条物理目录 */
+export interface TrashEntryItem {
+  source: string;
+  original_path: string;
+}
+
+/** 回收站条目 */
+export interface TrashItem {
+  trash_id: string;
+  skill_id: string;
+  name: string;
+  deleted_at: string;
+  reason: string;
+  entries: TrashEntryItem[];
+  /** 原路径已被占用，只能彻底删除 */
+  stale: boolean;
+}
+
+/** 回收站恢复结果 */
+export interface TrashRestoreReport {
+  restored: string[];
+  skipped: string[];
+  errors: string[];
+}
+
+/** 归并冲突处理方式 */
+export type ConflictAction = 'skip' | 'overwrite' | 'rename';
+
+export interface ConsolidationItem {
+  id: string;
+  name: string;
+  path: string;
+}
+
+export interface ConsolidationConflict {
+  id: string;
+  name: string;
+  agent_path: string;
+  central_path: string;
+}
+
+/** 跳过原因：already_managed | missing_skill_md | plugin_dir | plugin_cache | extra_path | hidden | not_a_dir */
+export interface ConsolidationSkip {
+  id: string;
+  reason: string;
+}
+
+export interface ConsolidationPlan {
+  agent: string;
+  agent_skills_dir: string;
+  movable: ConsolidationItem[];
+  conflicts: ConsolidationConflict[];
+  skipped: ConsolidationSkip[];
+}
+
+export interface ConflictDecision {
+  id: string;
+  action: ConflictAction;
+}
+
+export interface MovedSkill {
+  from_id: string;
+  to_id: string;
+}
+
+export interface ConsolidationReport {
+  moved: MovedSkill[];
+  skipped: string[];
+  errors: string[];
+  trash_ids: string[];
+}
+
 export const skillsApi = {
   list: async (): Promise<SkillMetadata[]> => {
     return await invoke<SkillMetadata[]>('list_skills');
@@ -62,6 +149,47 @@ export const skillsApi = {
       targetAgent,
       defaultEnabled,
     });
+  },
+
+  /** 批量删除（进回收站，可恢复） */
+  batchDelete: async (skillIds: string[]): Promise<BatchDeleteReport> => {
+    return await invoke<BatchDeleteReport>('batch_delete_skills', { skillIds });
+  },
+
+  /** 批量启用/停用同一 Agent */
+  batchToggle: async (skillIds: string[], agent: string, enable: boolean): Promise<BatchToggleReport> => {
+    return await invoke<BatchToggleReport>('batch_toggle_skills', { skillIds, agent, enable });
+  },
+
+  /** 归并预演（只读） */
+  planConsolidation: async (agent: string): Promise<ConsolidationPlan> => {
+    return await invoke<ConsolidationPlan>('plan_agent_consolidation', { agent });
+  },
+
+  /** 执行归并；冲突未给决策时默认跳过 */
+  applyConsolidation: async (
+    agent: string,
+    conflicts?: ConflictDecision[],
+  ): Promise<ConsolidationReport> => {
+    return await invoke<ConsolidationReport>('apply_agent_consolidation', { agent, conflicts });
+  },
+};
+
+export const trashApi = {
+  list: async (): Promise<TrashItem[]> => {
+    return await invoke<TrashItem[]>('list_trash');
+  },
+
+  restore: async (trashIds: string[]): Promise<TrashRestoreReport> => {
+    return await invoke<TrashRestoreReport>('restore_trash', { trashIds });
+  },
+
+  purge: async (trashId: string): Promise<void> => {
+    await invoke('purge_trash_entry', { trashId });
+  },
+
+  empty: async (): Promise<number> => {
+    return await invoke<number>('empty_trash');
   },
 };
 

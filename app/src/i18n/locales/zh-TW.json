@@ -114,6 +114,7 @@
     },
     "toast": {
       "nativeAgentWarning": "屬於 {{agent}} 原生目錄，無法一鍵關閉",
+      "deleteUndo": "復原",
       "skillDeleted": "技能「{{name}}」已刪除",
       "skillDeleteFailed": "刪除技能失敗",
       "skillAgentToggleFailed": "技能「{{skill}}」在 {{agent}} 上操作失敗，已回滾",
@@ -253,7 +254,62 @@
     "dismiss": "知道了",
     "agentSourcePath": "掃描目錄：",
     "noSkillsInSource": "該來源下暫無技能",
-    "noSkillsInSourceSearch": "未找到「{{keyword}}」"
+    "noSkillsInSourceSearch": "未找到「{{keyword}}」",
+      "importFromAgent": "從既有 Agent 匯入",
+      "batch": {
+        "entry": "批次管理",
+        "selectAll": "全選/取消全選",
+        "done": "完成",
+        "selected": "已選 {{count}} 項",
+        "clear": "清除選擇",
+        "agentLabel": "目標 Agent",
+        "enable": "啟用",
+        "disable": "停用",
+        "delete": "刪除",
+        "exit": "結束批次",
+        "deleting": "刪除中…",
+        "deleteTitle": "刪除 {{count}} 個技能",
+        "deleteWarning": "這些技能會先移到資源回收筒，可在「設定 → 進階 → 資源回收筒」還原。",
+        "deleteConfirm": "移到回收筒",
+        "enableDone": "已為 {{agent}} 啟用 {{count}} 個技能",
+        "disableDone": "已停用 {{agent}} 上的 {{count}} 個技能",
+        "deleteDone": "已將 {{count}} 個技能移到回收筒",
+        "partialFailed": "成功 {{ok}} 個，失敗 {{failed}} 個：{{error}}"
+      },
+      "consolidate": {
+        "entry": "併入根目錄",
+        "entryHint": "把該 Agent 目錄下的技能搬到中央技能庫，再以連結回填",
+        "title": "併入 {{agent}} 的技能",
+        "hint": "掃描該 Agent 原生目錄下的技能，搬入 ~/.skills-manager/skills 後以連結回填，只保留一份真實副本。",
+        "planning": "正在產生併入計畫…",
+        "planFailed": "無法產生併入計畫：{{error}}",
+        "summary": {
+          "movable": "可併入 {{count}}",
+          "conflicts": "衝突 {{count}}",
+          "skipped": "略過 {{count}}"
+        },
+        "movableTitle": "可直接併入",
+        "conflictsTitle": "與根目錄同名，需要選擇處理方式",
+        "skippedTitle": "略過（不會更動）",
+        "actions": {
+          "skip": "略過",
+          "overwrite": "覆寫根目錄",
+          "rename": "兩者都保留"
+        },
+        "skipReasons": {
+          "already_managed": "已由技能管理器接管",
+          "missing_skill_md": "缺少 SKILL.md",
+          "plugin_dir": "外掛目錄",
+          "plugin_cache": "外掛快取",
+          "extra_path": "來自額外掃描路徑",
+          "hidden": "隱藏目錄",
+          "not_a_dir": "不是目錄"
+        },
+        "nothingToDo": "這個 Agent 目錄下沒有需要併入的技能。",
+        "apply": "併入 {{count}} 個技能",
+        "applying": "併入中…",
+        "result": "併入完成：搬移 {{moved}}，略過 {{skipped}}，失敗 {{failed}}"
+      }
   },
   "githubBackup": {
     "title": "GitHub備份",
@@ -522,7 +578,34 @@
       "advancedTitle": "進階選項僅桌面端可用",
       "advancedDesc": "技能前綴過濾、隱藏規則、符號連結策略等進階配置會真實修改你的本地檔案系統，只在桌面版裡開放。",
       "downloadApp": "下載桌面版"
-    }
+    },
+      "trash": {
+        "title": "資源回收筒",
+        "description": "刪除的技能會先放在這裡，可以隨時還原。",
+        "refresh": "重新整理",
+        "empty": "清空回收筒",
+        "emptyConfirm": "確認清空？",
+        "emptyDone": "已清空 {{count}} 筆回收筒項目",
+        "emptyFailed": "清空回收筒失敗",
+        "emptyHint": "回收筒是空的。",
+        "restore": "還原",
+        "restoreDone": "已還原「{{name}}」",
+        "restoreSkipped": "原路徑已被占用，無法還原",
+        "restorePartial": "還原 {{restored}} 筆，失敗 {{failed}} 筆",
+        "restoreFailed": "還原失敗",
+        "purge": "永久刪除",
+        "purgeConfirm": "確認永久刪除",
+        "purgeDone": "已永久刪除",
+        "purgeFailed": "永久刪除失敗",
+        "stale": "路徑被占用",
+        "staleHint": "原路徑已有同名技能，只能永久刪除",
+        "entries": "{{count}} 個位置",
+        "loadFailed": "讀取回收筒失敗",
+        "reason": {
+          "delete": "刪除",
+          "overwrite": "併入覆寫"
+        }
+      }
   },
   "common": {
     "loading": "載入中...",

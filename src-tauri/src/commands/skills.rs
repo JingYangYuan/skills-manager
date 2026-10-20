@@ -1,6 +1,8 @@
+use crate::consolidate;
 use crate::linker::{is_junction_or_symlink, LinkManager};
 use crate::models::{AgentConfig, SkillEntry, SkillFileEntry, SkillMetadata, SOURCE_GLOBAL};
 use crate::scanner;
+use crate::trash;
 use crate::settings::AppSettingsManager;
 use crate::state::AppState;
 use log::{info, warn};
@@ -123,6 +125,15 @@ pub async fn enable_skill(
     agent: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    enable_skill_impl(skill_id, agent, &state).await
+}
+
+/// 启用逻辑（供 `batch_toggle_skills` 复用）
+pub(crate) async fn enable_skill_impl(
+    skill_id: String,
+    agent: Option<String>,
+    state: &AppState,
+) -> Result<(), String> {
     info!("Enabling skill '{}' for agent: {:?}", skill_id, agent);
 
     let agent_name = agent.ok_or_else(|| "agent 参数必填".to_string())?;
@@ -200,6 +211,15 @@ pub async fn disable_skill(
     skill_id: String,
     agent: Option<String>,
     state: State<'_, AppState>,
+) -> Result<(), String> {
+    disable_skill_impl(skill_id, agent, &state).await
+}
+
+/// 停用逻辑（供 `batch_toggle_skills` 复用）
+pub(crate) async fn disable_skill_impl(
+    skill_id: String,
+    agent: Option<String>,
+    state: &AppState,
 ) -> Result<(), String> {
     info!("Disabling skill '{}' for agent: {:?}", skill_id, agent);
 
@@ -544,9 +564,27 @@ pub async fn delete_skill(
     source: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    delete_skill_impl(skill_id, source, &state).await.map(|_| ())
+}
+
+/// 实际删除逻辑（供 `batch_delete_skills` 复用）。
+/// 返回新建的回收站条目 id（未落入回收站时为 None）。
+pub(crate) async fn delete_skill_impl(
+    skill_id: String,
+    source: Option<String>,
+    state: &AppState,
+) -> Result<Option<String>, String> {
     info!("Deleting skill: {} (source: {:?})", skill_id, source);
 
-    let (source_paths_to_delete, open_agents, agents, linking_strategy, will_have_global) = {
+    let (
+        source_paths_to_delete,
+        open_agents,
+        agents,
+        linking_strategy,
+        will_have_global,
+        skill_name,
+        state_snapshot,
+    ) = {
         let guard = state
             .settings_manager
             .lock()
@@ -560,6 +598,9 @@ pub async fn delete_skill(
             .into_iter()
             .find(|s| s.id == skill_id)
             .ok_or_else(|| format!("技能 '{}' 未找到", skill_id))?;
+
+        let skill_name = skill.name.clone();
+        let state_snapshot = config.skill_states.get(&skill_id).cloned();
 
         let to_delete: Vec<(String, String)> = if let Some(src) = source.as_ref() {
             skill
@@ -589,12 +630,15 @@ pub async fn delete_skill(
             config.agents.clone(),
             config.linking_strategy.clone(),
             will_have_global,
+            skill_name,
+            state_snapshot,
         )
     };
 
-    // 无论删除哪个源，都 unlink 所有 open agent + 删物理副本
+    // 无论删除哪个源，都 unlink 所有 open agent + 把物理副本移入回收站（可恢复）
     let skill_id_clone = skill_id.clone();
-    tokio::task::spawn_blocking(move || -> Result<(), String> {
+    let trash_root = trash::trash_root();
+    let trash_id = tokio::task::spawn_blocking(move || -> Result<Option<String>, String> {
         let linker = LinkManager::new(linking_strategy);
 
         for agent_name in &open_agents {
@@ -608,16 +652,44 @@ pub async fn delete_skill(
             }
         }
 
-        for (_src, path) in &source_paths_to_delete {
-            let p = std::path::Path::new(path);
-            if p.exists() {
-                std::fs::remove_dir_all(p)
-                    .map_err(|e| format!("删除技能目录失败 {:?}: {}", p, e))?;
-                info!("Skill directory deleted: {:?}", p);
-            }
+        if source_paths_to_delete.is_empty() {
+            return Ok(None);
         }
 
-        Ok(())
+        let dirs: Vec<(String, PathBuf)> = source_paths_to_delete
+            .iter()
+            .map(|(src, path)| (src.clone(), PathBuf::from(path)))
+            .collect();
+
+        match trash::move_to_trash_in(
+            &trash_root,
+            &skill_id_clone,
+            &skill_name,
+            "delete",
+            &dirs,
+            state_snapshot.as_ref(),
+        ) {
+            Ok(id) => {
+                info!("Skill '{}' moved to trash as {}", skill_id_clone, id);
+                Ok(Some(id))
+            }
+            Err(e) => {
+                // 归档失败时退化为物理删除，避免「删除」静默不生效
+                warn!(
+                    "Move to trash failed for '{}', falling back to permanent delete: {}",
+                    skill_id_clone, e
+                );
+                for (_src, path) in &source_paths_to_delete {
+                    let p = std::path::Path::new(path);
+                    if p.exists() {
+                        std::fs::remove_dir_all(p)
+                            .map_err(|err| format!("删除技能目录失败 {:?}: {}", p, err))?;
+                        info!("Skill directory deleted: {:?}", p);
+                    }
+                }
+                Ok(None)
+            }
+        }
     })
     .await
     .map_err(|e| format!("任务执行失败: {}", e))??;
@@ -663,8 +735,8 @@ pub async fn delete_skill(
     }
 
     info!("Skill '{}' deleted successfully", skill_id);
-    invalidate_skills_cache(&state);
-    Ok(())
+    invalidate_skills_cache(state);
+    Ok(trash_id)
 }
 
 /// 导入技能文件夹（从外部路径复制到中央存储）
@@ -1013,6 +1085,308 @@ pub async fn repair_skill_links(state: State<'_, AppState>) -> Result<RepairRepo
         report.relinked,
         report.removed,
         report.skipped,
+        report.errors.len()
+    );
+    Ok(report)
+}
+
+// ---------- 回收站 ----------
+
+#[derive(Debug, serde::Serialize)]
+pub struct TrashEntryView {
+    pub source: String,
+    pub original_path: String,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct TrashItemView {
+    pub trash_id: String,
+    pub skill_id: String,
+    pub name: String,
+    pub deleted_at: String,
+    pub reason: String,
+    pub entries: Vec<TrashEntryView>,
+    /// 原始路径已被占用，只能彻底删除
+    pub stale: bool,
+}
+
+#[derive(Debug, Default, serde::Serialize)]
+pub struct TrashRestoreReport {
+    pub restored: Vec<String>,
+    pub skipped: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+/// 列出回收站内容
+#[tauri::command]
+pub async fn list_trash() -> Result<Vec<TrashItemView>, String> {
+    let root = trash::trash_root();
+    let items = trash::list_trash_in(&root);
+    Ok(items
+        .into_iter()
+        .map(|meta| {
+            let stale = meta
+                .entries
+                .iter()
+                .any(|e| Path::new(&e.original_path).exists());
+            TrashItemView {
+                trash_id: meta.trash_id,
+                skill_id: meta.skill_id,
+                name: meta.name,
+                deleted_at: meta.deleted_at,
+                reason: meta.reason,
+                entries: meta
+                    .entries
+                    .into_iter()
+                    .map(|e| TrashEntryView {
+                        source: e.source,
+                        original_path: e.original_path,
+                    })
+                    .collect(),
+                stale,
+            }
+        })
+        .collect())
+}
+
+/// 从回收站恢复指定条目（目标已存在则跳过，不覆盖）
+#[tauri::command]
+pub async fn restore_trash(
+    trash_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<TrashRestoreReport, String> {
+    let root = trash::trash_root();
+    let (restored_entries, report) = trash::restore_trash_with_meta_in(&root, &trash_ids);
+
+    if !restored_entries.is_empty() {
+        let mut settings = state
+            .settings_manager
+            .lock()
+            .map_err(|e| format!("Failed to acquire lock: {}", e))?;
+
+        for restored in &restored_entries {
+            let Some(snapshot) = restored.meta.state.clone() else {
+                continue;
+            };
+            let states = &mut settings.get_config_mut().skill_states;
+            if states.contains_key(&restored.meta.skill_id) {
+                if let Some(existing) = states.get_mut(&restored.meta.skill_id) {
+                    for src in snapshot.sources {
+                        existing.insert_source(&src);
+                    }
+                    for agent in snapshot.open {
+                        if !existing.open.iter().any(|n| n == &agent) {
+                            existing.open.push(agent);
+                        }
+                    }
+                    existing.ensure_valid_primary();
+                }
+            } else {
+                states.insert(restored.meta.skill_id.clone(), snapshot);
+            }
+        }
+
+        settings
+            .save()
+            .map_err(|e| format!("Failed to save config: {}", e))?;
+    }
+
+    invalidate_skills_cache(&state);
+    info!(
+        "Restore done: restored={}, skipped={}, errors={}",
+        report.restored.len(),
+        report.skipped.len(),
+        report.errors.len()
+    );
+    Ok(TrashRestoreReport {
+        restored: report.restored,
+        skipped: report.skipped,
+        errors: report.errors,
+    })
+}
+
+/// 彻底删除单条回收站条目
+#[tauri::command]
+pub async fn purge_trash_entry(trash_id: String) -> Result<(), String> {
+    trash::purge_trash_entry_in(&trash::trash_root(), &trash_id)
+}
+
+/// 清空回收站，返回删除的条目数
+#[tauri::command]
+pub async fn empty_trash() -> Result<u32, String> {
+    trash::empty_trash_in(&trash::trash_root())
+}
+
+// ---------- 批量管理 ----------
+
+#[derive(Debug, Default, serde::Serialize)]
+pub struct BatchDeleteReport {
+    pub deleted: Vec<String>,
+    pub failed: Vec<String>,
+    pub errors: Vec<String>,
+    pub trash_ids: Vec<String>,
+}
+
+/// 批量删除：逐条调用单个删除逻辑，失败不中断，最终汇总
+#[tauri::command]
+pub async fn batch_delete_skills(
+    skill_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<BatchDeleteReport, String> {
+    info!("Batch deleting {} skills", skill_ids.len());
+    let mut report = BatchDeleteReport::default();
+
+    for skill_id in skill_ids {
+        match delete_skill_impl(skill_id.clone(), None, &state).await {
+            Ok(trash_id) => {
+                report.deleted.push(skill_id);
+                if let Some(id) = trash_id {
+                    report.trash_ids.push(id);
+                }
+            }
+            Err(e) => {
+                warn!("Batch delete failed for '{}': {}", skill_id, e);
+                report.errors.push(format!("{}: {}", skill_id, e));
+                report.failed.push(skill_id);
+            }
+        }
+    }
+
+    info!(
+        "Batch delete done: deleted={}, failed={}",
+        report.deleted.len(),
+        report.failed.len()
+    );
+    Ok(report)
+}
+
+#[derive(Debug, Default, serde::Serialize)]
+pub struct BatchToggleReport {
+    pub succeeded: u32,
+    pub failed: u32,
+    pub errors: Vec<String>,
+}
+
+/// 批量启用/停用：把一批技能合并到同一个 Agent，逐条失败不中断
+#[tauri::command]
+pub async fn batch_toggle_skills(
+    skill_ids: Vec<String>,
+    agent: String,
+    enable: bool,
+    state: State<'_, AppState>,
+) -> Result<BatchToggleReport, String> {
+    info!(
+        "Batch {} {} skills for agent '{}'",
+        if enable { "enabling" } else { "disabling" },
+        skill_ids.len(),
+        agent
+    );
+    let mut report = BatchToggleReport::default();
+
+    for skill_id in skill_ids {
+        let result = if enable {
+            enable_skill_impl(skill_id.clone(), Some(agent.clone()), &state).await
+        } else {
+            disable_skill_impl(skill_id.clone(), Some(agent.clone()), &state).await
+        };
+
+        match result {
+            Ok(()) => report.succeeded += 1,
+            Err(e) => {
+                warn!("Batch toggle failed for '{}': {}", skill_id, e);
+                report.failed += 1;
+                report.errors.push(format!("{}: {}", skill_id, e));
+            }
+        }
+    }
+
+    Ok(report)
+}
+
+// ---------- Agent → 根文件夹一键归并 ----------
+
+/// 干跑：返回可归并 / 冲突 / 跳过的完整清单（不修改任何文件）
+#[tauri::command]
+pub async fn plan_agent_consolidation(
+    agent: String,
+    state: State<'_, AppState>,
+) -> Result<consolidate::ConsolidationPlan, String> {
+    let home = dirs::home_dir().ok_or_else(|| "无法获取用户主目录".to_string())?;
+    let agent_config = {
+        let settings = state
+            .settings_manager
+            .lock()
+            .map_err(|e| format!("Failed to acquire lock: {}", e))?;
+        settings
+            .get_config()
+            .agents
+            .iter()
+            .find(|a| a.name == agent)
+            .cloned()
+            .ok_or_else(|| format!("Agent '{}' not found", agent))?
+    };
+
+    Ok(consolidate::plan_consolidation(
+        &agent_config,
+        &AppSettingsManager::get_skills_dir(),
+        &home,
+    ))
+}
+
+/// 执行归并（重算计划，避免前端持有过期路径）
+#[tauri::command]
+pub async fn apply_agent_consolidation(
+    agent: String,
+    conflicts: Option<Vec<consolidate::ConflictDecision>>,
+    state: State<'_, AppState>,
+) -> Result<consolidate::ConsolidationReport, String> {
+    let home = dirs::home_dir().ok_or_else(|| "无法获取用户主目录".to_string())?;
+    let central = AppSettingsManager::get_skills_dir();
+    let decisions = conflicts.unwrap_or_default();
+
+    let agent_config = {
+        let settings = state
+            .settings_manager
+            .lock()
+            .map_err(|e| format!("Failed to acquire lock: {}", e))?;
+        settings
+            .get_config()
+            .agents
+            .iter()
+            .find(|a| a.name == agent)
+            .cloned()
+            .ok_or_else(|| format!("Agent '{}' not found", agent))?
+    };
+
+    let plan = consolidate::plan_consolidation(&agent_config, &central, &home);
+    let trash_root = trash::trash_root();
+    let report = tokio::task::spawn_blocking(move || {
+        consolidate::apply_consolidation(&agent_config, &plan, &central, &decisions, &trash_root)
+    })
+    .await
+    .map_err(|e| format!("任务执行失败: {}", e))?;
+
+    {
+        let mut settings = state
+            .settings_manager
+            .lock()
+            .map_err(|e| format!("Failed to acquire lock: {}", e))?;
+        consolidate::apply_states(
+            &mut settings.get_config_mut().skill_states,
+            &agent,
+            &report,
+        );
+        settings
+            .save()
+            .map_err(|e| format!("Failed to save config: {}", e))?;
+    }
+
+    invalidate_skills_cache(&state);
+    info!(
+        "Consolidation for '{}' done: moved={}, skipped={}, errors={}",
+        agent,
+        report.moved.len(),
+        report.skipped.len(),
         report.errors.len()
     );
     Ok(report)

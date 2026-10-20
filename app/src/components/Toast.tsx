@@ -11,11 +11,17 @@ const TOAST_TYPE = {
 
 type ToastType = typeof TOAST_TYPE[keyof typeof TOAST_TYPE];
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface ToastItem {
   id: number;
   type: ToastType;
   message: string;
   description?: string;
+  action?: ToastAction;
   leaving?: boolean;
 }
 
@@ -43,7 +49,7 @@ const typeConfig: Record<ToastType, { icon: string; iconBg: string; iconColor: s
 };
 
 interface ToastContextType {
-  showToast: (type: ToastType, message: string, description?: string) => void;
+  showToast: (type: ToastType, message: string, description?: string, action?: ToastAction) => void;
 }
 
 const ToastContext = createContext<ToastContextType>({ showToast: () => {} });
@@ -63,11 +69,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, 300);
   }, []);
 
-  const showToast = useCallback((type: ToastType, message: string, description?: string) => {
-    const id = ++idRef.current;
-    setToasts(prev => [...prev, { id, type, message, description }]);
-    setTimeout(() => removeToast(id), 4000);
-  }, [removeToast]);
+  const showToast = useCallback(
+    (type: ToastType, message: string, description?: string, action?: ToastAction) => {
+      const id = ++idRef.current;
+      setToasts(prev => [...prev, { id, type, message, description, action }]);
+      // 带操作按钮的 toast 留出更多反应时间
+      setTimeout(() => removeToast(id), action ? 8000 : 4000);
+    },
+    [removeToast]
+  );
 
   return (
     <ToastContext.Provider value={{ showToast }}>
@@ -99,6 +109,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 </div>
                 {toast.description && (
                   <p className="text-xs text-slate-500 dark:text-gray-400 mt-1 leading-normal">{toast.description}</p>
+                )}
+                {toast.action && (
+                  <button
+                    onClick={() => {
+                      toast.action?.onClick();
+                      removeToast(toast.id);
+                    }}
+                    className="mt-2 text-xs font-bold text-primary hover:text-primary/80 transition-colors"
+                  >
+                    {toast.action.label}
+                  </button>
                 )}
               </div>
 

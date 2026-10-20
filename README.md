@@ -58,6 +58,9 @@
 - 按 Agent 开关启用状态
 - 查看来源、文件结构和详情内容
 - 支持拖拽导入包含 `SKILL.md` 的文件夹
+- **批量管理**：进入批量模式后框选（支持 Shift 连选、`Ctrl/Cmd+A` 全选），一次性启用、停用或删除多个 skills
+- **一键归并到根目录**：把某个 Agent 原生目录下的 skills 搬进 `~/.skills-manager/skills`，只保留一份真实副本；执行前先给出干跑清单（可归并 / 冲突 / 跳过），冲突支持逐条「跳过 / 覆盖 / 保留两者」
+- **回收站**：删除的技能先进 `~/.skills-manager/trash`，可在「设置 → 高级 → 回收站」中恢复或彻底删除，批量删除之后可一键撤销
 
 ![主页](docs/screen-shot/ScreenShot_Dashboard-1.png)
 ![技能详情](docs/screen-shot/ScreenShot_Dashboard-2.png)
@@ -173,6 +176,7 @@ cargo build --manifest-path=src-tauri/Cargo.toml
 
 - 应用配置：`~/.skills-manager/config.json`
 - 中央 skills 目录：`~/.skills-manager/skills/`
+- 回收站：`~/.skills-manager/trash/`（每次删除生成一个带 `meta.json` 的条目，可用「设置 → 高级 → 回收站」或直接删目录来清理）
 - GitHub 配置：`~/.skills-manager/github-config.json`
 
 每个 skill 的元数据主要来自其目录下的 **`SKILL.md`**，推荐使用 YAML frontmatter 定义 `name`、`description` 等字段。

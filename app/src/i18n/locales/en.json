@@ -108,6 +108,7 @@
     },
     "toast": {
       "nativeAgentWarning": "Belongs to {{agent}} native directory, cannot be disabled",
+      "deleteUndo": "Undo",
       "skillDeleted": "Skill \"{{name}}\" has been deleted",
       "skillDeleteFailed": "Failed to delete skill",
       "skillAgentToggleFailed": "Failed to update \"{{skill}}\" on {{agent}}, changes reverted",
@@ -236,7 +237,62 @@
     "dismiss": "Got it",
     "agentSourcePath": "Scan path: ",
     "noSkillsInSource": "No skills in this source",
-    "noSkillsInSourceSearch": "No results for \"{{keyword}}\""
+    "noSkillsInSourceSearch": "No results for \"{{keyword}}\"",
+      "importFromAgent": "Import from Agent",
+      "batch": {
+        "entry": "Batch manage",
+        "selectAll": "Select all",
+        "done": "Done",
+        "selected": "{{count}} selected",
+        "clear": "Clear",
+        "agentLabel": "Target agent",
+        "enable": "Enable",
+        "disable": "Disable",
+        "delete": "Delete",
+        "exit": "Exit",
+        "deleting": "Deleting…",
+        "deleteTitle": "Delete {{count}} skills",
+        "deleteWarning": "These skills will be moved to the recycle bin and can be restored from Settings → Advanced → Recycle bin.",
+        "deleteConfirm": "Move to recycle bin",
+        "enableDone": "Enabled {{count}} skills for {{agent}}",
+        "disableDone": "Disabled {{count}} skills on {{agent}}",
+        "deleteDone": "Moved {{count}} skills to the recycle bin",
+        "partialFailed": "{{ok}} succeeded, {{failed}} failed: {{error}}"
+      },
+      "consolidate": {
+        "entry": "Merge into root",
+        "entryHint": "Move this agent’s skills into the central library and link them back",
+        "title": "Merge {{agent}} skills",
+        "hint": "Skills found in this agent’s native directory are moved into ~/.skills-manager/skills and linked back, leaving a single real copy.",
+        "planning": "Building merge plan…",
+        "planFailed": "Could not build merge plan: {{error}}",
+        "summary": {
+          "movable": "{{count}} movable",
+          "conflicts": "{{count}} conflicts",
+          "skipped": "{{count}} skipped"
+        },
+        "movableTitle": "Ready to merge",
+        "conflictsTitle": "Same name exists in the root folder — choose how to handle it",
+        "skippedTitle": "Skipped (left untouched)",
+        "actions": {
+          "skip": "Skip",
+          "overwrite": "Overwrite root",
+          "rename": "Keep both"
+        },
+        "skipReasons": {
+          "already_managed": "Already managed by Skills Manager",
+          "missing_skill_md": "Missing SKILL.md",
+          "plugin_dir": "Plugin directory",
+          "plugin_cache": "Plugin cache",
+          "extra_path": "From an extra scan path",
+          "hidden": "Hidden directory",
+          "not_a_dir": "Not a directory"
+        },
+        "nothingToDo": "Nothing to merge in this agent directory.",
+        "apply": "Merge {{count}} skills",
+        "applying": "Merging…",
+        "result": "Merged: {{moved}} moved, {{skipped}} skipped, {{failed}} failed"
+      }
   },
   "githubBackup": {
     "title": "GitHub Backup",
@@ -504,7 +560,34 @@
       "advancedTitle": "Advanced options are desktop-only",
       "advancedDesc": "Skill prefix filters, hide rules and symlink strategy change your local filesystem — desktop-only by design.",
       "downloadApp": "Download desktop app"
-    }
+    },
+      "trash": {
+        "title": "Recycle bin",
+        "description": "Deleted skills land here first and can be restored at any time.",
+        "refresh": "Refresh",
+        "empty": "Empty bin",
+        "emptyConfirm": "Empty it?",
+        "emptyDone": "Removed {{count}} item(s) from the recycle bin",
+        "emptyFailed": "Failed to empty the recycle bin",
+        "emptyHint": "The recycle bin is empty.",
+        "restore": "Restore",
+        "restoreDone": "Restored “{{name}}”",
+        "restoreSkipped": "Original path is occupied, nothing was restored",
+        "restorePartial": "Restored {{restored}}, failed {{failed}}",
+        "restoreFailed": "Restore failed",
+        "purge": "Delete forever",
+        "purgeConfirm": "Delete permanently",
+        "purgeDone": "Deleted permanently",
+        "purgeFailed": "Permanent delete failed",
+        "stale": "Path occupied",
+        "staleHint": "A skill already exists at the original path; only permanent deletion is possible",
+        "entries": "{{count}} location(s)",
+        "loadFailed": "Failed to read the recycle bin",
+        "reason": {
+          "delete": "Deleted",
+          "overwrite": "Merged over"
+        }
+      }
   },
   "common": {
     "loading": "Loading...",

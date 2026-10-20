@@ -6,6 +6,7 @@ import { EmptyView } from '@/pages/Dashboard/components/EmptyView';
 import { SkillCard } from '@/pages/Dashboard/components/SkillCard';
 import { DragDropOverlay } from '@/pages/Dashboard/components/DragDropOverlay';
 import { ImportingOverlay } from '@/pages/Dashboard/components/ImportingOverlay';
+import { BatchActionBar } from '@/pages/Dashboard/components/BatchActionBar';
 import { SOURCE } from '@/pages/Dashboard/utils/source';
 import { getAgentRootPath } from '@/constants';
 import { getAgentIcon, needsInvertInDark } from '@/pages/Dashboard/utils/agentHelpers';
@@ -31,6 +32,20 @@ interface DashboardMainProps {
   pinnedIds: Set<string>;
   onContextMenu: (skillId: string, e: React.MouseEvent<HTMLElement>) => void;
   onOpenImportModal: () => void;
+  /** 批量管理模式 */
+  selectMode: boolean;
+  selectedSet: Set<string>;
+  selectionCount: number;
+  batchBusy: boolean;
+  onToggleSelect: (skillId: string) => void;
+  onSelectAllVisible: () => void;
+  onEnterSelection: () => void;
+  onExitSelection: () => void;
+  onClearSelection: () => void;
+  onBatchEnable: (agent: string) => void;
+  onBatchDisable: (agent: string) => void;
+  onBatchDelete: () => void;
+  onOpenConsolidate: (agent: string) => void;
   isDragOver: boolean;
   importing: boolean;
   sidebar: ReactNode;
@@ -58,6 +73,19 @@ export const DashboardMain: React.FC<DashboardMainProps> = memo(({
   pinnedIds,
   onContextMenu,
   onOpenImportModal,
+  selectMode,
+  selectedSet,
+  selectionCount,
+  batchBusy,
+  onToggleSelect,
+  onSelectAllVisible,
+  onEnterSelection,
+  onExitSelection,
+  onClearSelection,
+  onBatchEnable,
+  onBatchDisable,
+  onBatchDelete,
+  onOpenConsolidate,
   isDragOver,
   importing,
   sidebar,
@@ -129,7 +157,7 @@ export const DashboardMain: React.FC<DashboardMainProps> = memo(({
   }, [showDetailModal, jumpToSkill]);
 
   return (
-    <div className="flex flex-col flex-1 min-w-0 min-h-0">
+    <div className="relative flex flex-col flex-1 min-w-0 min-h-0">
       {/* 搜索栏 - 固定；overflow-visible 供统计条 hover 气泡向上伸出 */}
       <div
         className="overflow-visible bg-transparent dark:bg-dark-bg-secondary pr-5 pt-5 pb-4"
@@ -192,14 +220,54 @@ export const DashboardMain: React.FC<DashboardMainProps> = memo(({
                 )}
               </div>
 
-              {/* 从已有Agent导入 */}
-              <button
-                onClick={onOpenImportModal}
-                className="text-[11px] text-[var(--text-primary)] dark:text-slate-300 font-medium px-2 py-1 bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary rounded hover:bg-[var(--hover-bg)] dark:hover:bg-dark-hover transition-all flex-shrink-0 flex items-center gap-1.5"
-              >
-                <Icon name="download" className="text-xs" />
-                从已有Agent导入
-              </button>
+              <div className="flex flex-shrink-0 items-center gap-1.5">
+                {selectMode ? (
+                  <>
+                    <button
+                      onClick={onSelectAllVisible}
+                      className="text-[11px] text-[var(--text-primary)] dark:text-slate-300 font-medium px-2 py-1 bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary rounded hover:bg-[var(--hover-bg)] dark:hover:bg-dark-hover transition-all flex items-center gap-1.5"
+                    >
+                      <Icon name="check" className="text-xs" />
+                      {t('dashboard.batch.selectAll')}
+                    </button>
+                    <button
+                      onClick={onExitSelection}
+                      className="text-[11px] text-[var(--text-primary)] dark:text-slate-300 font-medium px-2 py-1 bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary rounded hover:bg-[var(--hover-bg)] dark:hover:bg-dark-hover transition-all flex items-center gap-1.5"
+                    >
+                      <Icon name="close" className="text-xs" />
+                      {t('dashboard.batch.done')}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {selectedSource !== SOURCE.Global && (
+                      <button
+                        onClick={() => onOpenConsolidate(selectedSource)}
+                        title={t('dashboard.consolidate.entryHint')}
+                        className="text-[11px] text-[var(--text-primary)] dark:text-slate-300 font-medium px-2 py-1 bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary rounded hover:bg-[var(--hover-bg)] dark:hover:bg-dark-hover transition-all flex items-center gap-1.5"
+                      >
+                        <Icon name="drive_folder_upload" className="text-xs" />
+                        {t('dashboard.consolidate.entry')}
+                      </button>
+                    )}
+                    <button
+                      onClick={onEnterSelection}
+                      className="text-[11px] text-[var(--text-primary)] dark:text-slate-300 font-medium px-2 py-1 bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary rounded hover:bg-[var(--hover-bg)] dark:hover:bg-dark-hover transition-all flex items-center gap-1.5"
+                    >
+                      <Icon name="check_circle" className="text-xs" />
+                      {t('dashboard.batch.entry')}
+                    </button>
+                    {/* 从已有Agent导入 */}
+                    <button
+                      onClick={onOpenImportModal}
+                      className="text-[11px] text-[var(--text-primary)] dark:text-slate-300 font-medium px-2 py-1 bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary rounded hover:bg-[var(--hover-bg)] dark:hover:bg-dark-hover transition-all flex items-center gap-1.5"
+                    >
+                      <Icon name="download" className="text-xs" />
+                      {t('dashboard.importFromAgent')}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
@@ -225,6 +293,9 @@ export const DashboardMain: React.FC<DashboardMainProps> = memo(({
               onOpenImportModal={onOpenImportModal}
               showDetailModal={showDetailModal}
               detailSkill={detailSkill}
+              selectMode={selectMode}
+              selectedSet={selectedSet}
+              onToggleSelect={onToggleSelect}
             />
           )}
 
@@ -235,6 +306,19 @@ export const DashboardMain: React.FC<DashboardMainProps> = memo(({
         {/* Importing Overlay */}
         {importing && <ImportingOverlay />}
       </div>
+
+      {selectMode && (
+        <BatchActionBar
+          count={selectionCount}
+          agents={agents}
+          busy={batchBusy}
+          onClear={onClearSelection}
+          onCancel={onExitSelection}
+          onEnable={onBatchEnable}
+          onDisable={onBatchDisable}
+          onDelete={onBatchDelete}
+        />
+      )}
     </div>
   );
 });
@@ -253,6 +337,9 @@ interface SkillGridProps {
   onOpenImportModal: () => void;
   showDetailModal: boolean;
   detailSkill: SkillMetadata | null;
+  selectMode: boolean;
+  selectedSet: Set<string>;
+  onToggleSelect: (skillId: string) => void;
 }
 
 const SkillGrid: React.FC<SkillGridProps> = ({
@@ -266,6 +353,9 @@ const SkillGrid: React.FC<SkillGridProps> = ({
   onShowDetail,
   onContextMenu,
   detailSkill,
+  selectMode,
+  selectedSet,
+  onToggleSelect,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -321,6 +411,9 @@ const SkillGrid: React.FC<SkillGridProps> = ({
               pinned={pinnedIds.has(skill.id)}
               onContextMenu={onContextMenu}
               isSelected={detailSkill?.id === skill.id}
+              selectMode={selectMode}
+              checked={selectedSet.has(skill.id)}
+              onSelect={onToggleSelect}
             />
           ))}
         </div>

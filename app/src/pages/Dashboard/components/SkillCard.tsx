@@ -25,6 +25,10 @@ interface SkillCardProps {
   onContextMenu?: (skillId: string, e: React.MouseEvent<HTMLDivElement>) => void;
   pinned?: boolean;
   isSelected?: boolean;
+  /** 批量管理模式：卡片整体变成可勾选区域 */
+  selectMode?: boolean;
+  checked?: boolean;
+  onSelect?: (skillId: string) => void;
 }
 
 export const SkillCard: React.FC<SkillCardProps> = memo(({
@@ -38,6 +42,9 @@ export const SkillCard: React.FC<SkillCardProps> = memo(({
   onContextMenu,
   pinned = false,
   isSelected = false,
+  selectMode = false,
+  checked = false,
+  onSelect,
 }) => {
   const { t } = useTranslation();
   const { allSources, nativeAgents } = useMergedView(skill);
@@ -93,6 +100,32 @@ export const SkillCard: React.FC<SkillCardProps> = memo(({
       onContextMenu={onContextMenu ? (e) => onContextMenu(skill.id, e) : undefined}
     >
       <PinIndicator pinned={pinned} />
+
+      {/* 批量管理模式：透明遮罩接管点击，避免误触卡片内的开关 */}
+      {selectMode && (
+        <button
+          type="button"
+          aria-pressed={checked}
+          aria-label={skill.name}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect?.(skill.id);
+          }}
+          className={`absolute inset-0 z-40 flex items-start justify-end rounded-xl transition-colors ${checked
+            ? 'bg-[var(--accent-primary)]/10 ring-2 ring-inset ring-[var(--accent-primary)]'
+            : 'bg-transparent hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
+          }`}
+        >
+          <span
+            className={`m-3 flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${checked
+              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white'
+              : 'border-[var(--border-color)] bg-white/90 dark:border-dark-border dark:bg-dark-bg-tertiary'
+            }`}
+          >
+            {checked && <Icon name="check" className="text-xs" />}
+          </span>
+        </button>
+      )}
 
       {/* 主信息区（top section + bottom bar）共享一个 relative 容器，
           水印钉在这个区域的右下角 —— 即使 accordion 展开了，水印仍然停留在原来的位置。 */}
