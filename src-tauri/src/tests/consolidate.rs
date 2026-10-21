@@ -268,4 +268,69 @@ mod tests {
         assert!(content.contains("OLD"));
         assert!(list_trash_in(&fx.trash_root).is_empty());
     }
+
+    /// 覆盖归并中途不能出现「旧副本已归档、新副本还没到位」的空窗：
+    /// 结束时中央必须是新内容，旧内容可在回收站找回，暂存目录不残留。
+    #[test]
+    fn overwrite_moves_new_copy_in_without_leaving_staging() {
+        let fx = fixture();
+        write_skill(&fx.agent_skills, "beta", "Beta", "NEW");
+        write_skill(&fx.central, "beta", "Beta", "OLD");
+
+        let plan = plan_consolidation(&fx.agent, &fx.central, &fx.home);
+        let report = apply_consolidation(
+            &fx.agent,
+            &plan,
+            &fx.central,
+            &[ConflictDecision {
+                id: "beta".to_string(),
+                action: "overwrite".to_string(),
+            }],
+            &fx.trash_root,
+        );
+
+        assert!(report.errors.is_empty(), "errors: {:?}", report.errors);
+        assert_eq!(report.moved.len(), 1);
+        assert_eq!(report.trash_ids.len(), 1);
+        // 中央只有新内容，没有暂存残留
+        let content = fs::read_to_string(fx.central.join("beta").join("SKILL.md")).unwrap();
+        assert!(content.contains("NEW"), "中央应为新副本: {}", content);
+        let staging = fx.home.join("skills-manager").join(".staging");
+        assert!(
+            !staging.join("beta").exists(),
+            ".staging 不应残留待转正的副本"
+        );
+        // 旧内容完整进了回收站
+        let trash = list_trash_in(&fx.trash_root);
+        assert_eq!(trash.len(), 1);
+        assert_eq!(trash[0].reason, "overwrite");
+        let payload = fx
+            .trash_root
+            .join(&trash[0].trash_id)
+            .join(&trash[0].entries[0].payload)
+            .join("SKILL.md");
+        let trashed = fs::read_to_string(payload).unwrap();
+        assert!(trashed.contains("OLD"), "回收站应保存旧副本: {}", trashed);
+    }
+
+    /// 上次归并/删除中断留下的空壳目录（无 SKILL.md 且为空）不应被当成冲突
+    #[test]
+    fn stale_empty_central_shell_is_movable() {
+        let fx = fixture();
+        write_skill(&fx.agent_skills, "beta", "Beta", "NEW");
+        fs::create_dir_all(fx.central.join("beta")).unwrap();
+
+        let plan = plan_consolidation(&fx.agent, &fx.central, &fx.home);
+        assert!(
+            plan.conflicts.is_empty(),
+            "空壳不应进冲突: {:?}",
+            plan.conflicts
+        );
+        assert_eq!(plan.movable.len(), 1);
+
+        let report = apply_consolidation(&fx.agent, &plan, &fx.central, &[], &fx.trash_root);
+        assert!(report.errors.is_empty(), "errors: {:?}", report.errors);
+        assert!(fx.central.join("beta").join("SKILL.md").exists());
+        assert!(!fx.agent_skills.join("beta").exists());
+    }
 }

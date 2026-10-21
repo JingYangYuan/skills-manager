@@ -29,12 +29,14 @@ export function ConsolidateModal({ isOpen, agent, onClose, onDone }: Consolidate
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [applyErrors, setApplyErrors] = useState<string[]>([]);
   const [decisions, setDecisions] = useState<Record<string, ConflictAction>>({});
 
   const loadPlan = useCallback(async () => {
     if (!agent) return;
     setLoading(true);
     setError(null);
+    setApplyErrors([]);
     try {
       const next = await skillsApi.planConsolidation(agent.name);
       setPlan(next);
@@ -77,17 +79,28 @@ export function ConsolidateModal({ isOpen, agent, onClose, onDone }: Consolidate
         action: decisions[c.id] ?? 'skip',
       }));
       const report = await skillsApi.applyConsolidation(agent.name, conflicts);
+      if (report.errors.length > 0) {
+        // 部分失败：留在抽屉里把原因逐条展示（之前只打 console.warn，用户看不到）
+        setApplyErrors(report.errors);
+        showToast(
+          'error',
+          t('dashboard.consolidate.resultFailed', {
+            moved: report.moved.length,
+            failed: report.errors.length,
+          })
+        );
+        await onDone();
+        return;
+      }
+      setApplyErrors([]);
       showToast(
         'success',
         t('dashboard.consolidate.result', {
           moved: report.moved.length,
           skipped: report.skipped.length + plan.skipped.length,
-          failed: report.errors.length,
+          failed: 0,
         })
       );
-      if (report.errors.length > 0) {
-        console.warn('归并过程中出现错误:', report.errors);
-      }
       await onDone();
       onClose();
     } catch (e) {
@@ -126,6 +139,21 @@ export function ConsolidateModal({ isOpen, agent, onClose, onDone }: Consolidate
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-[var(--accent-primary)] dark:border-dark-border" />
             {t('dashboard.consolidate.planning')}
           </div>
+        )}
+
+        {applyErrors.length > 0 && (
+          <section className="rounded-lg border border-red-300/70 bg-red-50 p-3 dark:border-red-900/40 dark:bg-red-950/30">
+            <h3 className="mb-1 text-xs font-bold text-red-700 dark:text-red-300">
+              {t('dashboard.consolidate.errorTitle', { count: applyErrors.length })}
+            </h3>
+            <ul className="space-y-1 font-mono text-[11px] leading-relaxed text-red-700/90 dark:text-red-300/90">
+              {applyErrors.map((message, index) => (
+                <li key={index} className="break-all">
+                  {message}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {error && (

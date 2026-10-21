@@ -318,7 +318,9 @@
       "nothingToDo": "這個 Agent 目錄下沒有需要併入的技能。",
       "apply": "併入 {{count}} 個技能",
       "applying": "併入中…",
-      "result": "併入完成：搬移 {{moved}}，略過 {{skipped}}，失敗 {{failed}}"
+      "result": "併入完成：搬移 {{moved}}，略過 {{skipped}}，失敗 {{failed}}",
+      "resultFailed": "併入完成，但有 {{failed}} 項失敗（已移動 {{moved}}）",
+      "errorTitle": "{{count}} 項未能併入："
     },
     "allSourcesLabel": "全部技能"
   },

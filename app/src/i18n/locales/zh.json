@@ -319,7 +319,9 @@
       "nothingToDo": "这个 Agent 目录下没有需要归并的技能。",
       "apply": "归并 {{count}} 个技能",
       "applying": "归并中…",
-      "result": "归并完成：搬移 {{moved}}，跳过 {{skipped}}，失败 {{failed}}"
+      "result": "归并完成：搬移 {{moved}}，跳过 {{skipped}}，失败 {{failed}}",
+      "resultFailed": "归并完成，但有 {{failed}} 项失败（已移动 {{moved}}）",
+      "errorTitle": "{{count}} 项未能归并："
     },
     "allSourcesLabel": "全部技能"
   },

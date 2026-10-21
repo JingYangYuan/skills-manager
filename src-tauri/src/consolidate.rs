@@ -177,7 +177,8 @@ pub fn plan_consolidation(
 
             let name = read_skill_name(&skill_md, &id);
             let central_target = central.join(&id);
-            if central_target.exists() {
+            // 中央位置若只是上次失败留下的空壳，按「可归并」处理，而不是冲突
+            if central_target.exists() && !is_stale_shell(&central_target) {
                 plan.conflicts.push(ConsolidationConflict {
                     id,
                     name,
@@ -220,6 +221,18 @@ pub fn plan_consolidation(
     plan
 }
 
+/// 只剰空壳：目录存在、没有 SKILL.md、且完全为空。
+/// 这是归并/删除中途失败（内容已搬走、目录没删掉）后留下的残留，不应被当成真冲突。
+fn is_stale_shell(path: &Path) -> bool {
+    if !path.is_dir() || path.join("SKILL.md").exists() {
+        return false;
+    }
+    match fs::read_dir(path) {
+        Ok(mut entries) => entries.next().is_none(),
+        Err(_) => false,
+    }
+}
+
 fn unique_target(central: &Path, id: &str, agent: &str) -> PathBuf {
     let base = format!("{}-{}", id, agent);
     let mut candidate = base.clone();
@@ -251,6 +264,15 @@ pub fn apply_consolidation(
     for item in &plan.movable {
         let from = PathBuf::from(&item.path);
         let to = central.join(&item.id);
+        // 目标只剩空壳时先清掉（上次归并/删除中断的残留）
+        if is_stale_shell(&to) {
+            if let Err(e) = fs::remove_dir(&to) {
+                report
+                    .errors
+                    .push(format!("{}: 清理残留空目录失败: {}", item.id, e));
+                continue;
+            }
+        }
         match move_skill_dir(&from, &to) {
             Ok(()) => {
                 info!("Consolidated {} -> {:?}", item.id, to);
@@ -275,6 +297,21 @@ pub fn apply_consolidation(
         match action.as_str() {
             "overwrite" => {
                 let existing = central.join(&conflict.id);
+                // 暂存位：先把 Agent 副本搬到这里，旧中央副本完好无损，失败也不会丢数据。
+                // 放在 `~/.skills-manager/.staging`：与中央库同卷（rename 原子），且不在扫描路径内。
+                let staging_root = central
+                    .parent()
+                    .map(|p| p.join(".staging"))
+                    .unwrap_or_else(|| central.to_path_buf());
+                let staging = staging_root.join(&conflict.id);
+                let _ = fs::remove_dir_all(&staging);
+
+                if let Err(e) = move_skill_dir(&from, &staging) {
+                    report.errors.push(format!("{}: {}", conflict.id, e));
+                    continue;
+                }
+
+                // 旧中央副本进回收站（可从回收站恢复）
                 if existing.exists() {
                     match trash::move_to_trash_in(
                         trash_root,
@@ -286,6 +323,8 @@ pub fn apply_consolidation(
                     ) {
                         Ok(trash_id) => report.trash_ids.push(trash_id),
                         Err(e) => {
+                            // 归档失败：把 Agent 副本搬回原处，保持原样
+                            let _ = move_skill_dir(&staging, &from);
                             report
                                 .errors
                                 .push(format!("{}: 覆盖前归档中央副本失败: {}", conflict.id, e));
@@ -293,7 +332,13 @@ pub fn apply_consolidation(
                         }
                     }
                 }
-                match move_skill_dir(&from, &existing) {
+
+                // 归档后可能仍有空壳（只删掉了内容没删掉目录），先清掉再转正
+                if is_stale_shell(&existing) {
+                    let _ = fs::remove_dir(&existing);
+                }
+
+                match move_skill_dir(&staging, &existing) {
                     Ok(()) => {
                         info!("Consolidated {} (overwrite) -> {:?}", conflict.id, existing);
                         report.moved.push(MovedSkill {
@@ -301,7 +346,11 @@ pub fn apply_consolidation(
                             to_id: conflict.id.clone(),
                         });
                     }
-                    Err(e) => report.errors.push(format!("{}: {}", conflict.id, e)),
+                    Err(e) => {
+                        // 转正失败：回滚到 Agent 目录，数据仍在
+                        let _ = move_skill_dir(&staging, &from);
+                        report.errors.push(format!("{}: {}", conflict.id, e));
+                    }
                 }
             }
             "rename" => {

@@ -78,15 +78,32 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
 }
 
 /// 移动目录：优先 `rename`，跨卷失败时退化为 copy + 删除源。
+///
+/// 目标已存在时直接报错，绝不「合并」——半合并会同时毁掉源目录和旧数据。
 pub(crate) fn move_dir(from: &Path, to: &Path) -> std::io::Result<()> {
     if let Some(parent) = to.parent() {
         fs::create_dir_all(parent)?;
+    }
+    if to.exists() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            format!("目标路径已存在: {}", to.display()),
+        ));
     }
     match fs::rename(from, to) {
         Ok(()) => Ok(()),
         Err(_) => {
             copy_dir_all(from, to)?;
-            fs::remove_dir_all(from)
+            fs::remove_dir_all(from).map_err(|e| {
+                std::io::Error::new(
+                    e.kind(),
+                    format!(
+                        "内容已复制到 {}，但删除原目录失败: {}（副本已保留，可手动清理源目录）",
+                        to.display(),
+                        e
+                    ),
+                )
+            })
         }
     }
 }
@@ -168,8 +185,18 @@ pub fn move_to_trash_in(
     }
 
     if entries.is_empty() {
-        let _ = fs::remove_dir_all(&entry_dir);
-        return Err(format!("移入回收站失败: {}", errors.join("; ")));
+        if errors.is_empty() {
+            let _ = fs::remove_dir_all(&entry_dir);
+            return Err(format!("没有可归档的目录（skill: {}）", skill_id));
+        }
+        // 内容可能已经复制进 payload、但删除源目录时失败：
+        // 保留条目目录（不写 meta，界面上看不到），以免连唯一副本也被销毁。
+        warn!("Trash entry kept for manual recovery: {:?}", entry_dir);
+        return Err(format!(
+            "移入回收站失败: {}（副本已保留在 {}）",
+            errors.join("; "),
+            entry_dir.display()
+        ));
     }
 
     let meta = TrashMeta {

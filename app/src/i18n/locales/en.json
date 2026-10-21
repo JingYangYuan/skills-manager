@@ -301,7 +301,9 @@
       "nothingToDo": "Nothing to merge in this agent directory.",
       "apply": "Merge {{count}} skills",
       "applying": "Merging…",
-      "result": "Merged: {{moved}} moved, {{skipped}} skipped, {{failed}} failed"
+      "result": "Merged: {{moved}} moved, {{skipped}} skipped, {{failed}} failed",
+      "resultFailed": "Merged with {{failed}} failure(s); {{moved}} moved",
+      "errorTitle": "{{count}} item(s) could not be merged:"
     },
     "allSourcesLabel": "All skills"
   },

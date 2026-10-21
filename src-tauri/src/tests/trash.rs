@@ -242,4 +242,22 @@ mod tests {
 
         assert_eq!(list_trash_in(&trash_root).len(), 1, "损坏条目应被跳过");
     }
+
+    /// 目标已存在时必须直接报错，不能「拷贝合并」过去：
+    /// 合并会同时破坏源目录和旧数据（归并覆盖旧副本的失败就是这么来的）。
+    #[test]
+    fn move_dir_refuses_existing_target() {
+        let (_tmp, central, _trash_root) = setup();
+        let src = central.join("src-skill");
+        write_skill(&src, "---\nname: src\n---\n");
+        let dst = central.join("dst-skill");
+        write_skill(&dst, "---\nname: dst\n---\n");
+        fs::write(dst.join("keep.md"), "old").unwrap();
+
+        let err = crate::trash::move_dir(&src, &dst).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists);
+        assert!(src.join("SKILL.md").exists(), "源目录必须原封不动");
+        assert!(dst.join("keep.md").exists(), "目标不能被合并污染");
+        assert!(dst.join("SKILL.md").exists());
+    }
 }

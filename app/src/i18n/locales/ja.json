@@ -300,7 +300,9 @@
       "nothingToDo": "この Agent ディレクトリに統合対象はありません。",
       "apply": "{{count}} 件を統合",
       "applying": "統合中…",
-      "result": "統合完了：移動 {{moved}}、スキップ {{skipped}}、失敗 {{failed}}"
+      "result": "統合完了：移動 {{moved}}、スキップ {{skipped}}、失敗 {{failed}}",
+      "resultFailed": "統合は完了しましたが、{{failed}} 件失敗しました（移動 {{moved}}）",
+      "errorTitle": "{{count}} 件を統合できませんでした："
     },
     "allSourcesLabel": "すべてのスキル"
   },
