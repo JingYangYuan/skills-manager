@@ -320,7 +320,8 @@
       "applying": "併入中…",
       "result": "併入完成：搬移 {{moved}}，略過 {{skipped}}，失敗 {{failed}}",
       "resultFailed": "併入完成，但有 {{failed}} 項失敗（已移動 {{moved}}）",
-      "errorTitle": "{{count}} 項未能併入："
+      "errorTitle": "{{count}} 項未能併入：",
+      "logHint": "詳細過程已寫入 ~/.skills-manager/consolidate.log"
     },
     "allSourcesLabel": "全部技能"
   },

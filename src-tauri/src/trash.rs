@@ -62,7 +62,7 @@ fn timestamp() -> String {
     chrono::Local::now().format("%Y%m%d-%H%M%S-%3f").to_string()
 }
 
-fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
+pub(crate) fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     fs::create_dir_all(dst)?;
     for entry in fs::read_dir(src)? {
         let entry = entry?;

@@ -153,6 +153,9 @@ export function ConsolidateModal({ isOpen, agent, onClose, onDone }: Consolidate
                 </li>
               ))}
             </ul>
+            <p className="mt-2 text-[10px] text-red-600/70 dark:text-red-400/70">
+              {t('dashboard.consolidate.logHint')}
+            </p>
           </section>
         )}
 

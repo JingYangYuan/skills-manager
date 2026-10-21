@@ -218,6 +218,20 @@ pub fn plan_consolidation(
     plan.movable.sort_by(|a, b| a.id.cmp(&b.id));
     plan.conflicts.sort_by(|a, b| a.id.cmp(&b.id));
     plan.skipped.sort_by(|a, b| a.id.cmp(&b.id));
+
+    consolidate_log(&format!(
+        "plan agent={} dir={} movable={:?} conflicts={:?} skipped={:?}",
+        plan.agent,
+        plan.agent_skills_dir,
+        plan.movable.iter().map(|i| i.id.as_str()).collect::<Vec<_>>(),
+        plan.conflicts.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(),
+        plan
+            .skipped
+            .iter()
+            .map(|s| format!("{}:{}", s.id, s.reason))
+            .collect::<Vec<_>>(),
+    ));
+
     plan
 }
 
@@ -251,6 +265,143 @@ fn move_skill_dir(from: &Path, to: &Path) -> Result<(), String> {
     trash::move_dir(from, to).map_err(|e| format!("移动 {:?} 失败: {}", from, e))
 }
 
+/// 归并专用日志：写到 `~/.skills-manager/consolidate.log`。
+/// 界面上只能看到汇总，出问题时要能事后查完整过程。
+fn consolidate_log(message: &str) {
+    use std::io::Write;
+
+    let Some(home) = dirs::home_dir() else {
+        return;
+    };
+    let dir = home.join(".skills-manager");
+    let path = dir.join("consolidate.log");
+    let _ = fs::create_dir_all(&dir);
+    if fs::metadata(&path).map(|m| m.len() > 256 * 1024).unwrap_or(false) {
+        let _ = fs::remove_file(&path);
+    }
+    let stamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let _ = writeln!(file, "[{}] {}", stamp, message);
+    }
+}
+
+/// 暂存位根目录：`~/.skills-manager/.staging`（与中央库同卷，且不在扫描范围内）
+fn staging_root(central: &Path) -> PathBuf {
+    central
+        .parent()
+        .map(|p| p.join(".staging"))
+        .unwrap_or_else(|| central.to_path_buf())
+}
+
+/// 清掉目标位置上的残留。
+///
+/// 优先 `rename` 挪进暂存位再删：即使目录被资源管理器/杀毒软件占着句柄，
+/// 重命名也能成功，不会把整个归并卡死。
+fn clear_stale_target(to: &Path, central: &Path, label: &str) -> Result<(), String> {
+    if !to.exists() {
+        return Ok(());
+    }
+    if !is_stale_shell(to) {
+        return Err(format!("目标已存在且不是空目录: {}", to.display()));
+    }
+    let aside = staging_root(central).join(format!("stale-{}", label));
+    let _ = fs::remove_dir_all(&aside);
+    match fs::rename(to, &aside) {
+        Ok(()) => {
+            if let Err(e) = fs::remove_dir_all(&aside) {
+                consolidate_log(&format!("stale shell moved aside {:?}, cleanup failed: {}", aside, e));
+            }
+            consolidate_log(&format!("stale shell cleared: {:?}", to));
+            Ok(())
+        }
+        Err(e) => {
+            consolidate_log(&format!("rename stale shell failed {:?}: {}", to, e));
+            fs::remove_dir(to).map_err(|e2| format!("清理残留空目录失败: {} / {}", e, e2))
+        }
+    }
+}
+
+/// 把源内容搬进目标位置。
+///
+/// 三种情况分开处理：
+/// 1. 目标不存在 → 直接 rename（原子、瞬时）；
+/// 2. 目标是空壳 → 先试着把空壳挤掉再 rename；空壳被别的进程占住（Windows 上常见的
+///    “另一个进程正在使用此文件”、连 rename 都不行）时，改为逐文件拷进空壳，
+///    不再依赖删除目标目录；
+/// 3. 目标已存在且不是空壳 → 报错，绝不合并。
+///
+/// 完成后源目录一定被清掉（删不掉时先 rename 到暂存位，避免扫描出重复技能）。
+fn promote_into(from: &Path, to: &Path, central: &Path, label: &str) -> Result<(), String> {
+    if to.exists() {
+        if !is_stale_shell(to) {
+            return Err(format!("目标已存在且不是空目录: {}", to.display()));
+        }
+        // 空壳被别的进程短暂占用（杀毒、索引器）是常态，先重试几次再退到拷贝
+        let mut clear_err = String::new();
+        let mut cleared = false;
+        for attempt in 1..=3 {
+            match clear_stale_target(to, central, label) {
+                Ok(()) => {
+                    cleared = true;
+                    break;
+                }
+                Err(e) => {
+                    clear_err = e;
+                    consolidate_log(&format!(
+                        "clear shell attempt {}/3 failed {:?}: {}",
+                        attempt, to, clear_err
+                    ));
+                    std::thread::sleep(std::time::Duration::from_millis(150));
+                }
+            }
+        }
+        if !cleared {
+            consolidate_log(&format!(
+                "shell {:?} is locked ({}), falling back to copy-into",
+                to, clear_err
+            ));
+            trash::copy_dir_all(from, to)
+                .map_err(|e| format!("向占用的目标目录写入失败: {}（原目录锁定原因: {}）", e, clear_err))?;
+            consolidate_log(&format!("copied into locked shell: {:?}", to));
+            discard_source(from, central, label);
+            return Ok(());
+        }
+    }
+
+    // 目标不存在或空壳已清掉：先试原子 rename（瞬时、不占额外空间）；
+    // 源或目标被别的进程占着时 rename 会直接失败，此时退到逐文件拷贝。
+    match move_skill_dir(from, to) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            consolidate_log(&format!(
+                "rename {:?} -> {:?} failed: {}, falling back to copy",
+                from, to, e
+            ));
+            trash::copy_dir_all(from, to)
+                .map_err(|e2| format!("{}（回退拷贝也失败: {}）", e, e2))?;
+            consolidate_log(&format!("copied {:?} -> {:?}", from, to));
+            discard_source(from, central, label);
+            Ok(())
+        }
+    }
+}
+
+/// 内容已经落到目标后清理源目录；删不掉就先挪进暂存位，避免同一技能出现两份。
+fn discard_source(from: &Path, central: &Path, label: &str) {
+    if !from.exists() {
+        return;
+    }
+    if fs::remove_dir_all(from).is_ok() {
+        return;
+    }
+    let aside = staging_root(central).join(format!("source-{}", label));
+    let _ = fs::remove_dir_all(&aside);
+    match fs::rename(from, &aside) {
+        Ok(()) => consolidate_log(&format!("source moved aside: {:?}", aside)),
+        Err(e) => consolidate_log(&format!("source cleanup failed {:?}: {}", from, e)),
+    }
+}
+
 /// 执行归并。`conflict_actions` 中未给出的冲突项按「跳过」处理。
 pub fn apply_consolidation(
     agent: &AgentConfig,
@@ -261,27 +412,31 @@ pub fn apply_consolidation(
 ) -> ConsolidationReport {
     let mut report = ConsolidationReport::default();
 
+    consolidate_log(&format!(
+        "apply agent={} dir={} movable={} conflicts={} skipped={}",
+        agent.name,
+        plan.agent_skills_dir,
+        plan.movable.len(),
+        plan.conflicts.len(),
+        plan.skipped.len()
+    ));
+
     for item in &plan.movable {
         let from = PathBuf::from(&item.path);
         let to = central.join(&item.id);
-        // 目标只剩空壳时先清掉（上次归并/删除中断的残留）
-        if is_stale_shell(&to) {
-            if let Err(e) = fs::remove_dir(&to) {
-                report
-                    .errors
-                    .push(format!("{}: 清理残留空目录失败: {}", item.id, e));
-                continue;
-            }
-        }
-        match move_skill_dir(&from, &to) {
+        match promote_into(&from, &to, central, &item.id) {
             Ok(()) => {
+                consolidate_log(&format!("moved {} -> {:?}", item.id, to));
                 info!("Consolidated {} -> {:?}", item.id, to);
                 report.moved.push(MovedSkill {
                     from_id: item.id.clone(),
                     to_id: item.id.clone(),
                 });
             }
-            Err(e) => report.errors.push(format!("{}: {}", item.id, e)),
+            Err(e) => {
+                consolidate_log(&format!("move failed {}: {}", item.id, e));
+                report.errors.push(format!("{}: {}", item.id, e));
+            }
         }
     }
 
@@ -298,15 +453,16 @@ pub fn apply_consolidation(
             "overwrite" => {
                 let existing = central.join(&conflict.id);
                 // 暂存位：先把 Agent 副本搬到这里，旧中央副本完好无损，失败也不会丢数据。
-                // 放在 `~/.skills-manager/.staging`：与中央库同卷（rename 原子），且不在扫描路径内。
-                let staging_root = central
-                    .parent()
-                    .map(|p| p.join(".staging"))
-                    .unwrap_or_else(|| central.to_path_buf());
-                let staging = staging_root.join(&conflict.id);
+                // 名字带时间戳，避开上次中断遗留的占位目录。
+                let stamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis())
+                    .unwrap_or(0);
+                let staging = staging_root(central).join(format!("{}-{}", conflict.id, stamp));
                 let _ = fs::remove_dir_all(&staging);
 
                 if let Err(e) = move_skill_dir(&from, &staging) {
+                    consolidate_log(&format!("stage failed {}: {}", conflict.id, e));
                     report.errors.push(format!("{}: {}", conflict.id, e));
                     continue;
                 }
@@ -321,10 +477,14 @@ pub fn apply_consolidation(
                         &[(SOURCE_GLOBAL.to_string(), existing.clone())],
                         None,
                     ) {
-                        Ok(trash_id) => report.trash_ids.push(trash_id),
+                        Ok(trash_id) => {
+                            consolidate_log(&format!("trashed old central: {}", trash_id));
+                            report.trash_ids.push(trash_id);
+                        }
                         Err(e) => {
                             // 归档失败：把 Agent 副本搬回原处，保持原样
                             let _ = move_skill_dir(&staging, &from);
+                            consolidate_log(&format!("archive old central failed {}: {}", conflict.id, e));
                             report
                                 .errors
                                 .push(format!("{}: 覆盖前归档中央副本失败: {}", conflict.id, e));
@@ -333,13 +493,10 @@ pub fn apply_consolidation(
                     }
                 }
 
-                // 归档后可能仍有空壳（只删掉了内容没删掉目录），先清掉再转正
-                if is_stale_shell(&existing) {
-                    let _ = fs::remove_dir(&existing);
-                }
-
-                match move_skill_dir(&staging, &existing) {
+                // 转正：目标位置可能只剩一个被其它进程占用着的空壳，交给 promote_into 处理
+                match promote_into(&staging, &existing, central, &format!("{}-ow", conflict.id)) {
                     Ok(()) => {
+                        consolidate_log(&format!("overwrote {} -> {:?}", conflict.id, existing));
                         info!("Consolidated {} (overwrite) -> {:?}", conflict.id, existing);
                         report.moved.push(MovedSkill {
                             from_id: conflict.id.clone(),
@@ -349,6 +506,7 @@ pub fn apply_consolidation(
                     Err(e) => {
                         // 转正失败：回滚到 Agent 目录，数据仍在
                         let _ = move_skill_dir(&staging, &from);
+                        consolidate_log(&format!("promote failed {}: {}", conflict.id, e));
                         report.errors.push(format!("{}: {}", conflict.id, e));
                     }
                 }
@@ -359,8 +517,9 @@ pub fn apply_consolidation(
                     .file_name()
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| conflict.id.clone());
-                match move_skill_dir(&from, &target) {
+                match promote_into(&from, &target, central, &format!("{}-rn", conflict.id)) {
                     Ok(()) => {
+                        consolidate_log(&format!("renamed {} -> {:?}", conflict.id, target));
                         info!("Consolidated {} (rename) -> {:?}", conflict.id, target);
                         report.moved.push(MovedSkill {
                             from_id: conflict.id.clone(),

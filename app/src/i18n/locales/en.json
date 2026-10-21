@@ -303,7 +303,8 @@
       "applying": "Merging…",
       "result": "Merged: {{moved}} moved, {{skipped}} skipped, {{failed}} failed",
       "resultFailed": "Merged with {{failed}} failure(s); {{moved}} moved",
-      "errorTitle": "{{count}} item(s) could not be merged:"
+      "errorTitle": "{{count}} item(s) could not be merged:",
+      "logHint": "Full details were written to ~/.skills-manager/consolidate.log"
     },
     "allSourcesLabel": "All skills"
   },

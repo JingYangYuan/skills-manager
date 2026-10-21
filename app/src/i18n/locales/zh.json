@@ -321,7 +321,8 @@
       "applying": "归并中…",
       "result": "归并完成：搬移 {{moved}}，跳过 {{skipped}}，失败 {{failed}}",
       "resultFailed": "归并完成，但有 {{failed}} 项失败（已移动 {{moved}}）",
-      "errorTitle": "{{count}} 项未能归并："
+      "errorTitle": "{{count}} 项未能归并：",
+      "logHint": "详细过程已写入 ~/.skills-manager/consolidate.log"
     },
     "allSourcesLabel": "全部技能"
   },
