@@ -16,9 +16,9 @@
 </p>
 
 <p>
-  <a href="https://github.com/cchao123/skills-manager/releases">Download latest release</a> ·
+  <a href="https://github.com/JingYangYuan/skills-manager/releases">Download latest release</a> ·
   <a href="docs/user-guide-en.md">User guide</a> ·
-  <a href="https://github.com/cchao123/skills-manager/issues">Feedback</a>
+  <a href="https://github.com/JingYangYuan/skills-manager/issues">Feedback</a>
 </p>
 
 </div>
@@ -76,7 +76,7 @@ Built-in agent presets currently include **Claude Code, Cursor, Codex, OpenClaw,
 
 ## Install and Use
 
-1. Download the latest build from [GitHub Releases](https://github.com/cchao123/skills-manager/releases).
+1. Download the latest build from [GitHub Releases](https://github.com/JingYangYuan/skills-manager/releases).
 2. Install and launch the app.
 3. On first launch, the app scans local agent directories and shows the skills it finds.
 
@@ -103,7 +103,7 @@ This repo ships with `pnpm-lock.yaml`, so the commands below use `pnpm` for repr
 ### Clone and install dependencies
 
 ```bash
-git clone https://github.com/cchao123/skills-manager.git
+git clone https://github.com/JingYangYuan/skills-manager.git
 cd skills-manager
 pnpm install
 ```
@@ -227,7 +227,7 @@ If the docs and the code ever disagree, trust the current code.
 
 ## Contributing
 
-Issues and pull requests are welcome at [GitHub Issues](https://github.com/cchao123/skills-manager/issues).
+Issues and pull requests are welcome at [GitHub Issues](https://github.com/JingYangYuan/skills-manager/issues).
 
 1. Fork the repository
 2. Create a branch: `git checkout -b feature/your-feature`

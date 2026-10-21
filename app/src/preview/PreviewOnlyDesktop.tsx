@@ -55,7 +55,7 @@ export default function PreviewOnlyDesktop({ feature }: PreviewOnlyDesktopProps)
         <p className="text-slate-600 dark:text-gray-300 leading-relaxed mb-8">{desc}</p>
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <a
-            href="https://github.com/cchao123/skills-managers/releases"
+            href="https://github.com/JingYangYuan/skills-manager/releases"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-strong)] text-white font-bold text-sm transition-colors shadow-sm"

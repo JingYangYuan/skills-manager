@@ -22,7 +22,7 @@ Skills Manager 是一款面向 macOS / Windows 的桌面应用，用来管理多
 
 ## 快速开始
 
-1. 从 [GitHub Releases](https://github.com/cchao123/skills-manager/releases) 下载最新版本
+1. 从 [GitHub Releases](https://github.com/JingYangYuan/skills-manager/releases) 下载最新版本
 2. 安装并启动应用
 3. 首次启动后，应用会自动扫描本地 Agent 目录并识别已安装的 skills
 

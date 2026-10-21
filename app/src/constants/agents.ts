@@ -78,6 +78,7 @@ const AGENT_META = {
     displayName: 'GitHub Copilot',
     rootPath: '~/.copilot',
     icon: copilotIcon,
+    // GitHub Copilot 标记为黑色单色，深色模式下需反色
     invertInDark: true,
   },
   workbuddy: {

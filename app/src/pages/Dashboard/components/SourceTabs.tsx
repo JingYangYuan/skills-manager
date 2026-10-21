@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import type { AgentConfig, SkillMetadata } from '@/types';
@@ -87,6 +87,18 @@ export const SourceTabs: React.FC<SourceTabsProps> = ({
 
   const closeCtxMenu = () => setCtxMenu((s) => ({ ...s, open: false }));
 
+  // 列表可能超出一个窗口的高度（Agent 已有 10+ 项），需要可滚动，
+  // 并且选中项变化时自动滚入可视区。
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    const item = itemRefs.current[selectedSource];
+    if (item) {
+      item.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [selectedSource, tabs.length]);
+
   const ctxItems: ContextMenuItem[] = ctxMenu.sourceId
     ? [
         {
@@ -110,9 +122,12 @@ export const SourceTabs: React.FC<SourceTabsProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* 侧边栏背景 */}
-      <div className="flex-1 w-11 flex flex-col items-center gap-2 overflow-visible mx-5 mb-5">
+    <div className="flex h-full min-h-0 flex-col">
+      {/* 来源列表：滚动区 */}
+      <div
+        ref={listRef}
+        className="mx-5 mb-2 min-h-0 w-11 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {/* 滑块容器 */}
         <div className="relative flex flex-col items-center w-full rounded-lg bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary">
           {/* 滑动高亮块 */}
@@ -146,7 +161,13 @@ export const SourceTabs: React.FC<SourceTabsProps> = ({
             const isAll = item.id === SOURCE.All;
 
             return (
-              <div key={item.id} className="relative z-10 w-full">
+              <div
+                key={item.id}
+                ref={(el) => {
+                  itemRefs.current[item.id] = el;
+                }}
+                className="relative z-10 w-full"
+              >
                 <button
                   onClick={() => {
                     onSelect(item.id);
@@ -198,20 +219,23 @@ export const SourceTabs: React.FC<SourceTabsProps> = ({
             );
           })}
 
-          {/* 设置按钮 */}
-          <div className="relative z-10 w-full mt-1">
-            <button
-              onClick={handleSettingsClick}
-              className="group w-full flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-all duration-200 h-[60px]"
-              title={t('settings.tabAgents')}
-            >
-              <div className="relative flex flex-col items-center justify-center h-full">
-                <div className="w-7 h-6 flex items-center justify-center transition-all duration-200 scale-100 group-hover:scale-105">
-                  <Icon name="settings" className="w-full h-full text-[var(--text-tertiary)] dark:text-gray-500 group-hover:text-[var(--text-primary)] dark:group-hover:text-gray-300 transition-colors" />
-                </div>
+        </div>
+      </div>
+
+      {/* 设置按钮固定在底部，不随列表滚动 */}
+      <div className="mx-5 mb-5 w-11 shrink-0">
+        <div className="flex w-full flex-col items-center rounded-lg bg-[var(--shell-surface-muted)] dark:bg-dark-bg-tertiary">
+          <button
+            onClick={handleSettingsClick}
+            className="group w-full flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-all duration-200 h-[60px]"
+            title={t('settings.tabAgents')}
+          >
+            <div className="relative flex flex-col items-center justify-center h-full">
+              <div className="w-7 h-6 flex items-center justify-center transition-all duration-200 scale-100 group-hover:scale-105">
+                <Icon name="settings" className="w-full h-full text-[var(--text-tertiary)] dark:text-gray-500 group-hover:text-[var(--text-primary)] dark:group-hover:text-gray-300 transition-colors" />
               </div>
-            </button>
-          </div>
+            </div>
+          </button>
         </div>
       </div>
 

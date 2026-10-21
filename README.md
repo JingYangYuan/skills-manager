@@ -16,9 +16,9 @@
 </p>
 
 <p>
-  <a href="https://github.com/cchao123/skills-manager/releases">下载最新版本</a> ·
+  <a href="https://github.com/JingYangYuan/skills-manager/releases">下载最新版本</a> ·
   <a href="docs/user-guide.md">使用指南</a> ·
-  <a href="https://github.com/cchao123/skills-manager/issues">反馈问题</a>
+  <a href="https://github.com/JingYangYuan/skills-manager/issues">反馈问题</a>
 </p>
 
 </div>
@@ -79,7 +79,7 @@
 
 ## 下载安装
 
-1. 前往 [GitHub Releases](https://github.com/cchao123/skills-manager/releases) 下载最新版本。
+1. 前往 [GitHub Releases](https://github.com/JingYangYuan/skills-manager/releases) 下载最新版本。
 2. 安装并启动应用。
 3. 首次启动后，应用会自动扫描本地 Agent 目录并展示已发现的 skills。
 
@@ -106,7 +106,7 @@ export PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig
 ### 克隆与安装依赖
 
 ```bash
-git clone https://github.com/cchao123/skills-manager.git
+git clone https://github.com/JingYangYuan/skills-manager.git
 cd skills-manager
 pnpm install
 ```
@@ -232,7 +232,7 @@ skills-manager/
 
 ## 参与贡献
 
-欢迎通过 [GitHub Issues](https://github.com/cchao123/skills-manager/issues) 反馈问题，也欢迎提交 Pull Request。
+欢迎通过 [GitHub Issues](https://github.com/JingYangYuan/skills-manager/issues) 反馈问题，也欢迎提交 Pull Request。
 
 1. Fork 仓库
 2. 新建分支：`git checkout -b feature/your-feature`

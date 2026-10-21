@@ -38,10 +38,10 @@ const templatePath = path.join(docsDir, "index.template.html");
 
 /**
  * Canonical site root. GitHub Pages serves /docs at this URL for the
- * cchao123/skills-managers repo. If the site gets a custom domain later,
+ * JingYangYuan/skills-manager repo. If the site gets a custom domain later,
  * override here or via env SITE_URL.
  */
-const SITE_URL = (process.env.SITE_URL || "https://cchao123.github.io/skills-managers/").replace(
+const SITE_URL = (process.env.SITE_URL || "https://jingyangyuan.github.io/skills-manager/").replace(
   /\/*$/,
   "/",
 );

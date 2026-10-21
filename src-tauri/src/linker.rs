@@ -118,36 +118,24 @@ extern "system" {
         lp_target_file_name: *const u16,
         dw_flags: u32,
     ) -> u8;
-
-    fn CreateFileW(
-        lp_file_name: *const u16,
-        dw_desired_access: u32,
-        dw_share_mode: u32,
-        lp_security_attributes: *mut core::ffi::c_void,
-        dw_creation_disposition: u32,
-        dw_flags_and_attributes: u32,
-        h_template_file: *mut core::ffi::c_void,
-    ) -> isize;
-
-    fn DeviceIoControl(
-        h_device: isize,
-        dw_io_control_code: u32,
-        lp_in_buffer: *const core::ffi::c_void,
-        n_in_buffer_size: u32,
-        lp_out_buffer: *mut core::ffi::c_void,
-        n_out_buffer_size: u32,
-        lp_bytes_returned: *mut u32,
-        lp_overlapped: *mut core::ffi::c_void,
-    ) -> i32;
-
-    fn CloseHandle(h_object: isize) -> i32;
 }
 
-/// `link` 为新符号链接路径，`point_to` 为链接目标（须存在）。
+/// 把路径转成可以安全交给 `cmd` / Win32 的字符串。
+///
+/// Agent 配置里的路径可能含正斜杠（`.config/opencode`、`.pi/agent`、`.omp/agent`），
+/// 拼出来的串会变成 `C:\Users\x\.config/opencode\skills\y`。这种串交给
+/// `cmd /C mklink /J <link> <target>` 时，`/opencode` 会被 cmd 当成命令行开关，
+/// 报 `Invalid switch` —— 这正是 opencode / pi / omp 三个 Agent 链接失败、
+/// 静默降级成复制副本的原因。
 #[cfg(windows)]
-fn path_to_wide_nul(path: &Path) -> Vec<u16> {
+fn cmd_path(path: &Path) -> String {
+    path.to_string_lossy().replace('/', "\\")
+}
+
+#[cfg(windows)]
+fn wide_from_str(value: &str) -> Vec<u16> {
     use std::os::windows::ffi::OsStrExt;
-    path.as_os_str()
+    std::ffi::OsStr::new(value)
         .encode_wide()
         .chain(std::iter::once(0))
         .collect()
@@ -169,8 +157,8 @@ fn strip_extended_prefix(p: &Path) -> PathBuf {
 /// 使用与「开发人员模式」兼容的标志创建符号链接；失败时再回退到 `std` 实现。
 #[cfg(windows)]
 fn create_symlink_windows_api(link: &Path, point_to: &Path, flags: u32) -> std::io::Result<()> {
-    let link_w = path_to_wide_nul(link);
-    let target_w = path_to_wide_nul(point_to);
+    let link_w = wide_from_str(&cmd_path(link));
+    let target_w = wide_from_str(&cmd_path(point_to));
     let ok = unsafe { CreateSymbolicLinkW(link_w.as_ptr(), target_w.as_ptr(), flags) };
     if ok == 0 {
         Err(std::io::Error::last_os_error())
@@ -181,18 +169,16 @@ fn create_symlink_windows_api(link: &Path, point_to: &Path, flags: u32) -> std::
 
 /// 使用 `cmd /c mklink /J` 创建 NTFS Junction（目录连接点）。
 /// Junction 无需任何特权，在 Windows 上可替代目录 symlink。
+///
+/// 路径必须先经 `cmd_path` 规范化：含正斜杠的路径会被 cmd 当作开关解析。
 #[cfg(windows)]
 fn create_junction(link: &Path, point_to: &Path) -> std::io::Result<()> {
     use std::os::windows::process::CommandExt;
 
+    let link_str = cmd_path(link);
+    let target_str = cmd_path(point_to);
     let output = std::process::Command::new("cmd")
-        .args([
-            "/C",
-            "mklink",
-            "/J",
-            &link.to_string_lossy(),
-            &point_to.to_string_lossy(),
-        ])
+        .args(["/C", "mklink", "/J", link_str.as_str(), target_str.as_str()])
         .creation_flags(0x08000000) // CREATE_NO_WINDOW
         .output()?;
     if output.status.success() {
@@ -206,91 +192,8 @@ fn create_junction(link: &Path, point_to: &Path) -> std::io::Result<()> {
     }
 }
 
-/// 直接用 `FSCTL_SET_REPARSE_POINT` 创建 NTFS Junction。
-/// 不依赖 cmd.exe，也不依赖「开发人员模式」；`link` 必须是已存在的空目录。
-#[cfg(windows)]
-fn create_junction_native(link: &Path, point_to: &Path) -> std::io::Result<()> {
-    use std::ffi::OsStr;
-    use std::os::windows::ffi::OsStrExt;
-
-    const GENERIC_WRITE: u32 = 0x4000_0000;
-    const OPEN_EXISTING: u32 = 3;
-    const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
-    const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
-    const FSCTL_SET_REPARSE_POINT: u32 = 0x0009_00A4;
-    const IO_REPARSE_TAG_MOUNT_POINT: u32 = 0xA000_0003;
-
-    let target = strip_extended_prefix(point_to);
-    let target_str = target.to_string_lossy().to_string();
-    let substitute = format!("\\??\\{}", target_str);
-
-    let substitute_w: Vec<u16> = OsStr::new(&substitute).encode_wide().collect();
-    let print_w: Vec<u16> = OsStr::new(&target_str).encode_wide().collect();
-
-    // REPARSE_DATA_BUFFER: ULONG tag | USHORT data_len | USHORT reserved |
-    //   USHORT sub_off | USHORT sub_len | USHORT print_off | USHORT print_len | WCHAR path_buffer[]
-    let path_buffer_bytes = (substitute_w.len() + print_w.len()) * 2;
-    let reparse_data_len = 8 + path_buffer_bytes;
-    let mut buffer = vec![0u8; 8 + reparse_data_len];
-    buffer[0..4].copy_from_slice(&IO_REPARSE_TAG_MOUNT_POINT.to_le_bytes());
-    buffer[4..6].copy_from_slice(&(reparse_data_len as u16).to_le_bytes());
-    // buffer[6..8] reserved = 0
-    buffer[8..10].copy_from_slice(&0u16.to_le_bytes());
-    buffer[10..12].copy_from_slice(&((substitute_w.len() * 2) as u16).to_le_bytes());
-    buffer[12..14].copy_from_slice(&((substitute_w.len() * 2) as u16).to_le_bytes());
-    buffer[14..16].copy_from_slice(&((print_w.len() * 2) as u16).to_le_bytes());
-
-    let mut offset = 16usize;
-    for unit in substitute_w.iter().chain(print_w.iter()) {
-        if offset + 2 > buffer.len() {
-            break;
-        }
-        buffer[offset..offset + 2].copy_from_slice(&unit.to_le_bytes());
-        offset += 2;
-    }
-
-    let link_wide = path_to_wide_nul(link);
-    let handle = unsafe {
-        CreateFileW(
-            link_wide.as_ptr(),
-            GENERIC_WRITE,
-            0,
-            core::ptr::null_mut(),
-            OPEN_EXISTING,
-            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-            core::ptr::null_mut(),
-        )
-    };
-    if handle == -1 {
-        return Err(std::io::Error::last_os_error());
-    }
-
-    let mut returned = 0u32;
-    let ok = unsafe {
-        DeviceIoControl(
-            handle,
-            FSCTL_SET_REPARSE_POINT,
-            buffer.as_ptr() as *const core::ffi::c_void,
-            buffer.len() as u32,
-            core::ptr::null_mut(),
-            0,
-            &mut returned,
-            core::ptr::null_mut(),
-        )
-    };
-    let error = std::io::Error::last_os_error();
-    unsafe {
-        CloseHandle(handle);
-    }
-    if ok == 0 {
-        Err(error)
-    } else {
-        Ok(())
-    }
-}
-
 /// 创建符号链接 (Windows)
-/// 优先级：Junction（无需权限） > Symlink（需权限） > 返回错误（由外层 fallback 到 Copy）
+/// 优先级：mklink /J（无需权限） > Symlink（需权限） > 返回错误（由外层 fallback 到 Copy）
 #[cfg(windows)]
 pub fn create_symlink(source: &Path, target: &Path) -> Result<LinkResult, LinkerError> {
     if !source.exists() {
@@ -319,30 +222,13 @@ pub fn create_symlink(source: &Path, target: &Path) -> Result<LinkResult, Linker
 
     if source.is_dir() {
         // 依次尝试三种「真链接」实现，每一种都校验落盘结果：
-        //   1) 原生 FSCTL_SET_REPARSE_POINT（不依赖 cmd.exe / 开发人员模式）
-        //   2) cmd /C mklink /J
-        //   3) CreateSymbolicLinkW / std::symlink_dir
+        //   1) cmd /C mklink /J（NTFS Junction，无需特权；路径先经 cmd_path 规范化）
+        //   2) CreateSymbolicLinkW（需要开发人员模式 / 提权）
+        //   3) std::symlink_dir（同上）
         // 全部失败才返回错误（外层才会降级为复制），并把原因写进 linker.log。
         let mut reasons: Vec<String> = Vec::new();
 
-        // 1) 原生 junction（要求目标已经是空目录）
-        match fs::create_dir_all(target) {
-            Ok(()) => match create_junction_native(target, &source_abs) {
-                Ok(()) if is_junction_or_symlink(target) => {
-                    linker_log(&format!(
-                        "junction(native) ok: {:?} -> {:?}",
-                        target, source_abs
-                    ));
-                    return Ok(LinkResult::Symlink);
-                }
-                Ok(()) => reasons.push("native junction: 创建后校验失败".to_string()),
-                Err(e) => reasons.push(format!("native junction: {}", e)),
-            },
-            Err(e) => reasons.push(format!("native junction: 无法创建目标目录: {}", e)),
-        }
-        let _ = fs::remove_dir(target);
-
-        // 2) mklink /J
+        // 1) mklink /J
         match create_junction(target, &source_abs) {
             Ok(()) if is_junction_or_symlink(target) => {
                 linker_log(&format!("junction(mklink) ok: {:?} -> {:?}", target, source_abs));
@@ -352,6 +238,7 @@ pub fn create_symlink(source: &Path, target: &Path) -> Result<LinkResult, Linker
             Err(e) => reasons.push(format!("mklink /J: {}", e)),
         }
         let _ = fs::remove_dir(target);
+        let _ = fs::remove_file(target);
 
         // 3) symlink（需要开发人员模式或管理员权限）
         let flags_priv = SYMLINK_FLAG_DIRECTORY | SYMLINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;

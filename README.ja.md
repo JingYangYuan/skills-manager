@@ -16,9 +16,9 @@
 </p>
 
 <p>
-  <a href="https://github.com/cchao123/skills-manager/releases">最新版をダウンロード</a> ·
+  <a href="https://github.com/JingYangYuan/skills-manager/releases">最新版をダウンロード</a> ·
   <a href="docs/user-guide-en.md">ユーザーガイド</a> ·
-  <a href="https://github.com/cchao123/skills-manager/issues">フィードバック</a>
+  <a href="https://github.com/JingYangYuan/skills-manager/issues">フィードバック</a>
 </p>
 
 </div>
@@ -76,7 +76,7 @@
 
 ## インストールと利用
 
-1. [GitHub Releases](https://github.com/cchao123/skills-manager/releases) から最新ビルドをダウンロードします。
+1. [GitHub Releases](https://github.com/JingYangYuan/skills-manager/releases) から最新ビルドをダウンロードします。
 2. アプリをインストールして起動します。
 3. 初回起動時に、ローカルの Agent ディレクトリが自動でスキャンされ、見つかった skills が表示されます。
 
@@ -103,7 +103,7 @@ export PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig
 ### クローンと依存関係のインストール
 
 ```bash
-git clone https://github.com/cchao123/skills-manager.git
+git clone https://github.com/JingYangYuan/skills-manager.git
 cd skills-manager
 pnpm install
 ```
@@ -227,7 +227,7 @@ skills-manager/
 
 ## コントリビューション
 
-Issue や Pull Request は [GitHub Issues](https://github.com/cchao123/skills-manager/issues) から歓迎します。
+Issue や Pull Request は [GitHub Issues](https://github.com/JingYangYuan/skills-manager/issues) から歓迎します。
 
 1. リポジトリを fork する
 2. ブランチを作成する: `git checkout -b feature/your-feature`

@@ -24,7 +24,7 @@ export function PreviewLockedSection({ feature }: PreviewLockedSectionProps) {
         {feature === 'agents' ? t('settings.previewLocked.agentsDesc') : t('settings.previewLocked.advancedDesc')}
       </p>
       <a
-        href="https://github.com/cchao123/skills-managers/releases"
+        href="https://github.com/JingYangYuan/skills-manager/releases"
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-strong)] text-white font-bold text-sm transition-colors shadow-sm"

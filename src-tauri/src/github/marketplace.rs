@@ -36,7 +36,7 @@ pub(super) fn generate_readme(skills_dir: &Path, config: &GitHubRepoConfig) {
 
     let mut content = String::from(
         "# Skills Backup\n\n\
-         > Synced by [Skills Manager](https://github.com/cchao123/skills-managers) — \
+         > Synced by [Skills Manager](https://github.com/JingYangYuan/skills-manager) — \
          a desktop app for managing AI coding agent skills.\n\n",
     );
 

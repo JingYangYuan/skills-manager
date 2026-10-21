@@ -275,7 +275,7 @@ impl GitHubIntegrator {
         // 创建一个初始的 README.md
         let readme_path = temp_dir.join("README.md");
         let readme_content = format!(
-            "# Skills\n\nManaged by [Skills Manager](https://github.com/cchao123/skills-managers)\n\n---\n_This repository was automatically initialized by Skills Manager._",
+            "# Skills\n\nManaged by [Skills Manager](https://github.com/JingYangYuan/skills-manager)\n\n---\n_This repository was automatically initialized by Skills Manager._",
         );
         fs::write(&readme_path, readme_content)?;
 
@@ -450,12 +450,12 @@ impl GitHubIntegrator {
             let tree = repo.find_tree(tree_id)?;
             let msg = if overwrite_remote {
                 format!(
-                    "Force sync (mirror local → remote) [{}]\n\nSynced-by: Skills Manager <https://github.com/cchao123/skills-managers>",
+                    "Force sync (mirror local → remote) [{}]\n\nSynced-by: Skills Manager <https://github.com/JingYangYuan/skills-manager>",
                     chrono::Utc::now().format("%Y-%m-%d %H:%M")
                 )
             } else {
                 format!(
-                    "Sync skills from Skills Manager [{}]\n\nSynced-by: Skills Manager <https://github.com/cchao123/skills-managers>",
+                    "Sync skills from Skills Manager [{}]\n\nSynced-by: Skills Manager <https://github.com/JingYangYuan/skills-manager>",
                     chrono::Utc::now().format("%Y-%m-%d %H:%M")
                 )
             };

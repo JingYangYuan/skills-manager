@@ -149,7 +149,7 @@ const main = () => {
   }
 
   console.log(`\n✨ Release v${newVersion} created successfully!`);
-  console.log(`\n🔗 View GitHub Actions: https://github.com/cchao123/skills-managers/actions\n`);
+  console.log(`\n🔗 View GitHub Actions: https://github.com/JingYangYuan/skills-manager/actions\n`);
 };
 
 main();

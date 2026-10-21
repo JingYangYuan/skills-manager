@@ -1,10 +1,10 @@
 [package]
 name = "skills-manager"
-version = "1.4.2"
+version = "1.4.3"
 description = "Skills Manager for Claude Code"
 authors = ["Claude Skills Manager"]
 license = "MIT"
-repository = "https://github.com/cchao123/skills-managers"
+repository = "https://github.com/JingYangYuan/skills-manager"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

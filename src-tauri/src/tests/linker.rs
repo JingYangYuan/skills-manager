@@ -112,6 +112,39 @@ mod tests {
         assert!(source.join("SKILL.md").exists());
     }
 
+    /// Agent 配置里的路径可能带正斜杠（`.config/opencode`、`.pi/agent`、`.omp/agent`）。
+    /// 拼进 `mklink` 命令行后，`/opencode` 会被 cmd 当成开关，链接失败后静默降级成副本，
+    /// 技能在界面上就再也关不掉。本测试用带 `/` 的路径组件复现该形态。
+    #[test]
+    fn test_create_symlink_with_mixed_separators() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("central").join("ppt-master");
+        fs::create_dir_all(&source).unwrap();
+        fs::write(source.join("SKILL.md"), b"---\nname: ppt-master\n---\n").unwrap();
+
+        // 目标路径带正斜杠，与真实配置（~/.config/opencode、~/.pi/agent、~/.omp/agent）一致
+        let target = temp_dir
+            .path()
+            .join("home")
+            .join(".config/opencode")
+            .join("skills")
+            .join("ppt-master");
+
+        let result = crate::linker::create_symlink(&source, &target).unwrap();
+        assert_eq!(result, crate::linker::LinkResult::Symlink);
+        assert!(
+            crate::linker::is_junction_or_symlink(&target),
+            "含正斜杠的路径也必须建成真链接，不能退化为副本"
+        );
+        assert_eq!(
+            fs::read_to_string(target.join("SKILL.md")).unwrap(),
+            "---\nname: ppt-master\n---\n"
+        );
+
+        crate::linker::remove_link(&target).unwrap();
+        assert!(source.join("SKILL.md").exists());
+    }
+
     #[test]
     fn test_dirs_identical_and_missing() {
         let temp_dir = TempDir::new().unwrap();

@@ -133,7 +133,11 @@ export const SkillCard: React.FC<SkillCardProps> = memo(({
       <NativeSourceWatermark nativeAgents={detectedNativeAgents} inRoot={allSources.includes(SOURCE.Global)} />
 
       {/* Top section: Icon + Info on left, STATUS + Toggle + Expand on right */}
-      <div className="relative z-10 p-4 pb-0 cursor-pointer" onClick={() => onShowDetail(skill)}>
+      {/* 批量模式下右上角有勾选框遮罩，右侧需留出空间，避免标题/描述钻到勾选框下方 */}
+      <div
+        className={`relative z-10 p-4 pb-0 cursor-pointer ${selectMode ? 'pr-14' : ''}`}
+        onClick={() => onShowDetail(skill)}
+      >
         <div className="flex justify-between items-start gap-3">
           {/* Left: Icon + Name + Source Badges + Description */}
           <div className="flex items-start gap-3 min-w-0 flex-1">

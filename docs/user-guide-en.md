@@ -22,7 +22,7 @@ The app is built with Tauri 2 + React and supports both Chinese and English, plu
 
 ## Quick Start
 
-1. Download the latest release from [GitHub Releases](https://github.com/cchao123/skills-manager/releases)
+1. Download the latest release from [GitHub Releases](https://github.com/JingYangYuan/skills-manager/releases)
 2. Install and launch the app
 3. On first launch, the app automatically scans local agent directories and detects installed skills
 

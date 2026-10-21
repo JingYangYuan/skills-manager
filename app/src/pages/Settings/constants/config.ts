@@ -1,8 +1,8 @@
 // GitHub URLs
 export const GITHUB_URLS = {
-  REPO: 'https://github.com/cchao123/skills-managers',
-  RELEASES: 'https://github.com/cchao123/skills-managers/releases',
-  ISSUES: 'https://github.com/cchao123/skills-managers/issues',
+  REPO: 'https://github.com/JingYangYuan/skills-manager',
+  RELEASES: 'https://github.com/JingYangYuan/skills-manager/releases',
+  ISSUES: 'https://github.com/JingYangYuan/skills-manager/issues',
 } as const;
 
 // Languages configuration
