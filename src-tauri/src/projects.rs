@@ -21,13 +21,28 @@ use std::path::{Path, PathBuf};
 /// 这里补一行即可，前端会按 `agent` 自动分组。
 pub const PROJECT_SKILL_DIRS: &[(&str, &str)] = &[
     (".claude/skills", "claude"),
-    (".agents/skills", "agents"),
+    (".agents/skills", "antigravity"),
     (".cursor/skills", "cursor"),
     (".codex/skills", "codex"),
     (".opencode/skills", "opencode"),
-    (".gemini/skills", "gemini"),
+    (".gemini/skills", "antigravity"),
     (".grok/skills", "grok"),
     (".kilocode/skills", "kilo"),
+    (".github/skills", "copilot"),
+    (".workbuddy/skills", "workbuddy"),
+    (".codebuddy/skills", "codebuddy"),
+    (".zcode/skills", "zcode"),
+    (".openclaw/skills", "openclaw"),
+    (".kimi-code/skills", "kimi"),
+    (".marscode/skills", "marscode"),
+    (".openclaude/skills", "openclaude"),
+    (".hermes/skills", "hermes"),
+    (".ima/skills", "ima"),
+    (".trae/skills", "trae"),
+    (".qoder/skills", "qoder"),
+    (".kiro/skills", "kiro"),
+    (".pi/skills", "pi"),
+    (".omp/skills", "omp"),
 ];
 
 /// 展开 `~` 前缀（与 `commands::settings::open_folder` 的规则保持一致）。

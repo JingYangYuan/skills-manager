@@ -727,6 +727,7 @@
     "urlRequired": "遠端類型需要 URL",
     "targetRequired": "請至少選擇一個目標 agent",
     "targets": "寫入目標",
+    "notDetected": "未偵測到",
     "conflict": "衝突",
     "conflictHint": "各 agent 設定不一致",
     "conflictOnly": "僅衝突",

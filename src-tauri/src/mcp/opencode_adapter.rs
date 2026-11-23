@@ -45,13 +45,27 @@ fn map_to_json(map: &BTreeMap<String, String>) -> Value {
     )
 }
 
+fn servers_ref<'a>(root: &'a Value, nested: bool) -> Option<&'a Map<String, Value>> {
+    let mcp = root.get("mcp").and_then(Value::as_object)?;
+    if nested {
+        mcp.get("servers").and_then(Value::as_object)
+    } else {
+        Some(mcp)
+    }
+}
+
 pub fn read(path: &Path) -> Result<Vec<McpServerDef>, String> {
+    read_with(path, true)
+}
+
+/// Kilo Code 的 `mcp.<name>`（不再套一层 `servers`）。
+pub fn read_flat(path: &Path) -> Result<Vec<McpServerDef>, String> {
+    read_with(path, false)
+}
+
+fn read_with(path: &Path, nested: bool) -> Result<Vec<McpServerDef>, String> {
     let root = read_root(path)?;
-    let Some(servers) = root
-        .get("mcp")
-        .and_then(|mcp| mcp.get("servers"))
-        .and_then(Value::as_object)
-    else {
+    let Some(servers) = servers_ref(&root, nested) else {
         return Ok(Vec::new());
     };
 
@@ -144,7 +158,7 @@ pub fn def_to_value(def: &McpServerDef) -> Value {
     Value::Object(obj)
 }
 
-fn servers_mut(root: &mut Value) -> Result<&mut Map<String, Value>, String> {
+fn servers_mut(root: &mut Value, nested: bool) -> Result<&mut Map<String, Value>, String> {
     let root_obj = root
         .as_object_mut()
         .ok_or_else(|| "OpenCode 配置根节点不是对象".to_string())?;
@@ -154,6 +168,9 @@ fn servers_mut(root: &mut Value) -> Result<&mut Map<String, Value>, String> {
     let mcp_obj = mcp
         .as_object_mut()
         .ok_or_else(|| "OpenCode 配置的 mcp 不是对象".to_string())?;
+    if !nested {
+        return Ok(mcp_obj);
+    }
     let servers = mcp_obj
         .entry("servers".to_string())
         .or_insert_with(|| Value::Object(Map::new()));
@@ -201,13 +218,22 @@ fn apply_def(obj: &mut Map<String, Value>, def: &McpServerDef) {
 }
 
 pub fn upsert(path: &Path, def: &McpServerDef) -> Result<(), String> {
+    upsert_with(path, def, true)
+}
+
+/// Kilo Code 使用顶层 `mcp.<name>`。
+pub fn upsert_flat(path: &Path, def: &McpServerDef) -> Result<(), String> {
+    upsert_with(path, def, false)
+}
+
+fn upsert_with(path: &Path, def: &McpServerDef, nested: bool) -> Result<(), String> {
     let mut root = read_root(path)?;
-    let mut obj = match servers_mut(&mut root)?.get(&def.name) {
+    let mut obj = match servers_mut(&mut root, nested)?.get(&def.name) {
         Some(Value::Object(map)) => map.clone(),
         _ => Map::new(),
     };
     apply_def(&mut obj, def);
-    servers_mut(&mut root)?.insert(def.name.clone(), Value::Object(obj));
+    servers_mut(&mut root, nested)?.insert(def.name.clone(), Value::Object(obj));
 
     let content = serde_json::to_string_pretty(&root)
         .map_err(|e| format!("序列化 OpenCode 配置失败: {}", e))?;
@@ -217,11 +243,19 @@ pub fn upsert(path: &Path, def: &McpServerDef) -> Result<(), String> {
 }
 
 pub fn delete(path: &Path, name: &str) -> Result<(), String> {
+    delete_with(path, name, true)
+}
+
+pub fn delete_flat(path: &Path, name: &str) -> Result<(), String> {
+    delete_with(path, name, false)
+}
+
+fn delete_with(path: &Path, name: &str, nested: bool) -> Result<(), String> {
     if !path.exists() {
         return Ok(());
     }
     let mut root = read_root(path)?;
-    let removed = servers_mut(&mut root)
+    let removed = servers_mut(&mut root, nested)
         .ok()
         .and_then(|servers| servers.remove(name))
         .is_some();
@@ -234,11 +268,19 @@ pub fn delete(path: &Path, name: &str) -> Result<(), String> {
 }
 
 pub fn set_enabled(path: &Path, name: &str, enabled: bool) -> Result<(), String> {
+    set_enabled_with(path, name, enabled, true)
+}
+
+pub fn set_enabled_flat(path: &Path, name: &str, enabled: bool) -> Result<(), String> {
+    set_enabled_with(path, name, enabled, false)
+}
+
+fn set_enabled_with(path: &Path, name: &str, enabled: bool, nested: bool) -> Result<(), String> {
     if !path.exists() {
         return Ok(());
     }
     let mut root = read_root(path)?;
-    let Some(server) = servers_mut(&mut root)
+    let Some(server) = servers_mut(&mut root, nested)
         .ok()
         .and_then(|servers| servers.get_mut(name))
         .and_then(Value::as_object_mut)

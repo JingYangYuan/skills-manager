@@ -68,7 +68,7 @@
 
 ### 项目（项目级 Skills）
 
-- 注册任意项目根目录，自动扫描 `.claude/skills`、`.agents/skills`、`.cursor/skills`、`.codex/skills`、`.opencode/skills`、`.gemini/skills`、`.grok/skills`、`.kilocode/skills`
+- 注册任意项目根目录，自动扫描 23 个 Agent 的项目目录：`.claude/skills`、`.agents/skills`、`.cursor/skills`、`.codex/skills`、`.opencode/skills`、`.gemini/skills`、`.grok/skills`、`.kilocode/skills`、`.github/skills`、`.workbuddy/skills`、`.codebuddy/skills`、`.zcode/skills`、`.openclaw/skills`、`.kimi-code/skills`、`.marscode/skills`、`.openclaude/skills`、`.hermes/skills`、`.ima/skills`、`.trae/skills`、`.qoder/skills`、`.kiro/skills`、`.pi/skills`、`.omp/skills`
 - 从 `~/.claude.json` 与常见项目目录自动发现候选项目
 - 把中央库 skill 安装到项目（按全局链接策略创建链接或复制）
 - 把项目原生 skill 导入中央库；删除托管链接，或把原生目录移入回收站（可恢复）
@@ -76,10 +76,10 @@
 
 ### MCP 管理
 
-- 聚合 Claude Code、Cursor、Antigravity / Gemini、OpenCode、Codex、Grok 的 MCP server 配置
+- 聚合 19 个 Agent 的 MCP server 配置：Claude Code、Cursor、Antigravity（GUI / CLI）、OpenClaw、OpenCode、Codex、Grok、WorkBuddy、ZCode、Pi、OMP、Kiro、Kilo Code、Kimi Code、GitHub Copilot、Trae、Qoder、CodeBuddy、MarsCode
 - 新增 / 编辑 / 删除，按 Agent 启用或停用；同名 server 定义不一致时标记冲突
 - 跨 Agent 同步；写入前自动备份为 `*.skills-manager.bak`，JSON / TOML 写回保留其它字段与注释
-- 项目级 MCP：`<project>/.mcp.json`、`<project>/.cursor/mcp.json`、`<project>/.grok/config.toml`
+- 项目级 MCP：`.mcp.json`、`.cursor/mcp.json`、`.agents/mcp_config.json`（Antigravity）、`.codex/config.toml`、`.grok/config.toml`、`opencode.json`、`.kiro/settings/mcp.json`、`.kilo/kilo.json`、`.zcode/config.json`、`.github/mcp.json`、`.trae/mcp.json`、`.qoder/settings.local.json`、`.codebuddy/mcp.json`、`.kimi-code/mcp.json`、`.pi/mcp.json`、`.omp/mcp.json`
 
 ### GitHub 备份与分发
 

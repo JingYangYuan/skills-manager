@@ -710,6 +710,7 @@
     "urlRequired": "Remote servers need a URL",
     "targetRequired": "Select at least one target agent",
     "targets": "Write to",
+    "notDetected": "not detected",
     "conflict": "Conflict",
     "conflictHint": "Agent configs differ",
     "conflictOnly": "Conflicts only",

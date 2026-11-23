@@ -728,6 +728,7 @@
     "urlRequired": "远程类型需要 URL",
     "targetRequired": "请至少选择一个目标 agent",
     "targets": "写入目标",
+    "notDetected": "未检测到",
     "conflict": "冲突",
     "conflictHint": "各 agent 配置不一致",
     "conflictOnly": "仅冲突",

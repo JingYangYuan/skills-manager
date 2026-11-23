@@ -709,6 +709,7 @@
     "urlRequired": "リモートには URL が必要です",
     "targetRequired": "対象 agent を 1 つ以上選択してください",
     "targets": "書き込み先",
+    "notDetected": "未検出",
     "conflict": "競合",
     "conflictHint": "agent ごとに設定が異なります",
     "conflictOnly": "競合のみ",

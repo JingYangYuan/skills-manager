@@ -18,7 +18,8 @@ fn target(agent: &'static str, path: &Path) -> McpTarget {
         spec: McpAgentSpec {
             agent,
             label: agent,
-            format: McpFormat::Json,
+            format: McpFormat::Json(mcp::STANDARD_JSON),
+            rel_path: "",
         },
         path: path.to_path_buf(),
     }
@@ -33,18 +34,15 @@ fn json_roundtrip_preserves_unknown_fields() {
     )
     .unwrap();
 
-    let defs = json_adapter::read(&path).unwrap();
+    let defs = json_adapter::read(&path, mcp::STANDARD_JSON).unwrap();
     assert_eq!(defs.len(), 1);
     assert_eq!(defs[0].command.as_deref(), Some("npx"));
-    assert_eq!(
-        defs[0].args,
-        vec!["-y".to_string(), "pkg".to_string()]
-    );
+    assert_eq!(defs[0].args, vec!["-y".to_string(), "pkg".to_string()]);
     assert_eq!(defs[0].env.get("TOKEN").map(String::as_str), Some("x"));
 
     let mut def = defs[0].clone();
     def.args.push("--flag".to_string());
-    json_adapter::upsert(&path, &def, false, true).unwrap();
+    json_adapter::upsert(&path, &def, mcp::STANDARD_JSON).unwrap();
 
     let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(root["mcpServers"]["demo"]["timeout"], 30);
@@ -65,9 +63,9 @@ fn json_http_server_uses_url_and_type() {
         enabled: true,
         extra: Value::Null,
     };
-    json_adapter::upsert(&path, &def, false, true).unwrap();
+    json_adapter::upsert(&path, &def, mcp::STANDARD_JSON).unwrap();
 
-    let defs = json_adapter::read(&path).unwrap();
+    let defs = json_adapter::read(&path, mcp::STANDARD_JSON).unwrap();
     assert_eq!(defs[0].transport, McpTransport::Http);
     assert_eq!(defs[0].url.as_deref(), Some("https://example.com/mcp"));
     assert_eq!(
@@ -90,7 +88,7 @@ fn json_remote_omits_type_when_not_requested() {
         enabled: true,
         extra: Value::Null,
     };
-    json_adapter::upsert(&path, &def, false, false).unwrap();
+    json_adapter::upsert(&path, &def, mcp::CURSOR_JSON).unwrap();
 
     let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
     assert!(root["mcpServers"]["remote"].get("type").is_none());
@@ -109,7 +107,7 @@ fn antigravity_uses_server_url_and_disabled() {
     )
     .unwrap();
 
-    let defs = json_adapter::read(&path).unwrap();
+    let defs = json_adapter::read(&path, mcp::ANTIGRAVITY_JSON).unwrap();
     let notion = defs.iter().find(|def| def.name == "notion").unwrap();
     assert_eq!(notion.transport, McpTransport::Http);
     assert_eq!(notion.url.as_deref(), Some("https://mcp.notion.com/mcp"));
@@ -119,7 +117,7 @@ fn antigravity_uses_server_url_and_disabled() {
     assert_eq!(local.transport, McpTransport::Stdio);
     assert!(local.enabled);
 
-    json_adapter::upsert_antigravity(&path, notion).unwrap();
+    json_adapter::upsert(&path, notion, mcp::ANTIGRAVITY_JSON).unwrap();
     let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
     assert!(root["mcpServers"]["notion"].get("url").is_none());
     assert!(root["mcpServers"]["notion"].get("type").is_none());
@@ -135,6 +133,167 @@ fn antigravity_uses_server_url_and_disabled() {
 }
 
 #[test]
+fn zcode_nested_servers_and_enabled_flag() {
+    let (_dir, path) = temp_file("config.json");
+    fs::write(
+        &path,
+        r#"{"provider":{"name":"x"},"mcp":{"servers":{"exa":{"type":"http","url":"https://exa.ai/mcp","enabled":false}}}}"#,
+    )
+    .unwrap();
+
+    let defs = json_adapter::read(&path, mcp::ZCODE_JSON).unwrap();
+    assert_eq!(defs.len(), 1);
+    assert_eq!(defs[0].transport, McpTransport::Http);
+    assert_eq!(defs[0].url.as_deref(), Some("https://exa.ai/mcp"));
+    assert!(!defs[0].enabled);
+
+    json_adapter::upsert(&path, &defs[0], mcp::ZCODE_JSON).unwrap();
+    let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(root["mcp"]["servers"]["exa"]["enabled"], false);
+    assert_eq!(root["provider"]["name"], "x");
+}
+
+#[test]
+fn workbuddy_uses_streamable_http_type() {
+    let (_dir, path) = temp_file("mcp.json");
+    let def = McpServerDef {
+        name: "notion".to_string(),
+        transport: McpTransport::Http,
+        command: None,
+        args: vec![],
+        env: BTreeMap::new(),
+        url: Some("https://mcp.notion.com/mcp".to_string()),
+        headers: BTreeMap::new(),
+        enabled: false,
+        extra: Value::Null,
+    };
+    json_adapter::upsert(&path, &def, mcp::WORKBUDDY_JSON).unwrap();
+
+    let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        root["mcpServers"]["notion"]["type"],
+        "streamableHttp"
+    );
+    assert_eq!(root["mcpServers"]["notion"]["disabled"], true);
+}
+
+#[test]
+fn kimi_uses_transport_and_enabled() {
+    let (_dir, path) = temp_file("mcp.json");
+    fs::write(
+        &path,
+        r#"{"mcpServers":{"legacy":{"transport":"sse","url":"https://example.com/sse","enabled":false},"modern":{"url":"https://example.com/mcp"}}}"#,
+    )
+    .unwrap();
+
+    let defs = json_adapter::read(&path, mcp::KIMI_JSON).unwrap();
+    let legacy = defs.iter().find(|def| def.name == "legacy").unwrap();
+    assert_eq!(legacy.transport, McpTransport::Sse);
+    assert!(!legacy.enabled);
+    let modern = defs.iter().find(|def| def.name == "modern").unwrap();
+    assert_eq!(modern.transport, McpTransport::Http);
+
+    let http = McpServerDef {
+        name: "modern".to_string(),
+        transport: McpTransport::Http,
+        command: None,
+        args: vec![],
+        env: BTreeMap::new(),
+        url: Some("https://example.com/mcp".to_string()),
+        headers: BTreeMap::new(),
+        enabled: true,
+        extra: Value::Null,
+    };
+    json_adapter::upsert(&path, &http, mcp::KIMI_JSON).unwrap();
+    let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(root["mcpServers"]["modern"].get("transport").is_none());
+    assert_eq!(root["mcpServers"]["modern"]["enabled"], true);
+}
+
+#[test]
+fn openclaw_uses_nested_transport_and_enabled() {
+    let (_dir, path) = temp_file("openclaw.json");
+    fs::write(
+        &path,
+        r#"{"mcp":{"servers":{"remote":{"url":"https://example.com/mcp","transport":"streamable-http","enabled":false,"requestTimeoutMs":20000}}}}"#,
+    )
+    .unwrap();
+
+    let defs = json_adapter::read(&path, mcp::OPENCLAW_JSON).unwrap();
+    assert_eq!(defs.len(), 1);
+    assert_eq!(defs[0].transport, McpTransport::Http);
+    assert_eq!(defs[0].url.as_deref(), Some("https://example.com/mcp"));
+    assert!(!defs[0].enabled);
+    assert_eq!(defs[0].extra["requestTimeoutMs"], 20000);
+
+    json_adapter::upsert(&path, &defs[0], mcp::OPENCLAW_JSON).unwrap();
+    let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        root["mcp"]["servers"]["remote"]["transport"],
+        "streamable-http"
+    );
+    assert_eq!(root["mcp"]["servers"]["remote"]["enabled"], false);
+    assert_eq!(root["mcp"]["servers"]["remote"]["requestTimeoutMs"], 20000);
+}
+
+#[test]
+fn trae_omits_type_for_remote() {
+    let (_dir, path) = temp_file("mcp.json");
+    let def = McpServerDef {
+        name: "remote".to_string(),
+        transport: McpTransport::Http,
+        command: None,
+        args: vec![],
+        env: BTreeMap::new(),
+        url: Some("https://example.com/mcp".to_string()),
+        headers: BTreeMap::new(),
+        enabled: true,
+        extra: Value::Null,
+    };
+    json_adapter::upsert(&path, &def, mcp::TRAE_JSON).unwrap();
+
+    let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(root["mcpServers"]["remote"].get("type").is_none());
+    assert_eq!(
+        root["mcpServers"]["remote"]["url"],
+        "https://example.com/mcp"
+    );
+}
+
+#[test]
+fn kilo_uses_flat_mcp_map() {
+    let (_dir, path) = temp_file("kilo.json");
+    fs::write(
+        &path,
+        r#"{"mcp":{"local":{"type":"local","command":["npx","-y","pkg"],"enabled":true}}}"#,
+    )
+    .unwrap();
+
+    let defs = opencode_adapter::read_flat(&path).unwrap();
+    assert_eq!(defs.len(), 1);
+    assert_eq!(defs[0].command.as_deref(), Some("npx"));
+    assert_eq!(defs[0].args, vec!["-y".to_string(), "pkg".to_string()]);
+    assert!(defs[0].enabled);
+
+    let remote = McpServerDef {
+        name: "remote".to_string(),
+        transport: McpTransport::Http,
+        command: None,
+        args: vec![],
+        env: BTreeMap::new(),
+        url: Some("https://example.com/mcp".to_string()),
+        headers: BTreeMap::new(),
+        enabled: false,
+        extra: Value::Null,
+    };
+    opencode_adapter::upsert_flat(&path, &remote).unwrap();
+
+    let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(root["mcp"]["remote"]["type"], "remote");
+    assert_eq!(root["mcp"]["remote"]["enabled"], false);
+}
+
+#[test]
 fn opencode_local_and_remote_mapping() {
     let (_dir, path) = temp_file("opencode.json");
     fs::write(
@@ -146,10 +305,7 @@ fn opencode_local_and_remote_mapping() {
     let defs = opencode_adapter::read(&path).unwrap();
     assert_eq!(defs.len(), 1);
     assert_eq!(defs[0].command.as_deref(), Some("npx"));
-    assert_eq!(
-        defs[0].args,
-        vec!["-y".to_string(), "zotero".to_string()]
-    );
+    assert_eq!(defs[0].args, vec!["-y".to_string(), "zotero".to_string()]);
     assert_eq!(defs[0].env.get("A").map(String::as_str), Some("1"));
 
     let remote = McpServerDef {

@@ -188,7 +188,7 @@ Candidates come from projects recorded in `~/.claude.json` plus one-level subdir
 
 Only first-level folders containing `SKILL.md` inside these conventional directories are recognized:
 
-`.claude/skills`, `.agents/skills`, `.cursor/skills`, `.codex/skills`, `.opencode/skills`, `.gemini/skills`, `.grok/skills`, `.kilocode/skills`
+`.claude/skills`, `.agents/skills`, `.cursor/skills`, `.codex/skills`, `.opencode/skills`, `.gemini/skills`, `.grok/skills`, `.kilocode/skills`, `.github/skills`, `.workbuddy/skills`, `.codebuddy/skills`, `.zcode/skills`, `.openclaw/skills`, `.kimi-code/skills`, `.marscode/skills`, `.openclaude/skills`, `.hermes/skills`, `.ima/skills`, `.trae/skills`, `.qoder/skills`, `.kiro/skills`, `.pi/skills`, `.omp/skills`
 
 ### 3.3 Install, Import, and Delete
 
@@ -210,10 +210,23 @@ The MCP page aggregates MCP server configs across agents and manages both global
 |-------|-------------|
 | Claude Code | `~/.claude.json` |
 | Cursor | `~/.cursor/mcp.json` |
-| Antigravity / Gemini | `~/.gemini/config/mcp_config.json` |
+| Antigravity (GUI / CLI) | `~/.gemini/config/mcp_config.json` |
+| OpenClaw | `~/.openclaw/openclaw.json` (must be valid JSON) |
 | OpenCode | `~/.config/opencode/opencode.json` |
 | Codex | `~/.codex/config.toml` |
 | Grok | `~/.grok/config.toml` |
+| WorkBuddy | `~/.workbuddy/mcp.json` |
+| ZCode | `~/.zcode/cli/config.json` |
+| Pi | `~/.pi/agent/mcp.json` |
+| OMP | `~/.omp/agent/mcp.json` |
+| Kiro | `~/.kiro/settings/mcp.json` |
+| Kilo Code | `~/.config/kilo/kilo.json` |
+| Kimi Code | `~/.kimi-code/mcp.json` |
+| GitHub Copilot | `~/.copilot/mcp-config.json` |
+| Trae | `~/.trae/mcp.json` |
+| Qoder | `~/.qoder/settings.json` |
+| CodeBuddy | `~/.codebuddy/mcp.json` |
+| MarsCode | `~/.marscode/vscode.mcp.config.json` |
 
 ### 4.2 Add and Edit
 
@@ -227,18 +240,31 @@ Environment values and header values are masked in the detail panel by default.
 
 ### 4.3 Enable, Sync, and Delete
 
-- Formats with a native enable flag (Codex / Grok / OpenCode / Cursor `enabled`, Antigravity `disabled`) are written directly; Claude uses a managed disabled state stored in `~/.skills-manager/mcp-state.json`
-- Antigravity remote servers use `serverUrl`; writes follow that format automatically
-- The detail panel can show raw config and copy the current definition to agents that do not have it
+- Formats with a native enable flag (Codex / Grok / OpenCode / Kilo / ZCode / Pi / Kimi / OpenClaw `enabled`, Cursor / Antigravity / WorkBuddy / Kiro `disabled`) are written directly; other agents use a managed disabled state stored in `~/.skills-manager/mcp-state.json`
+- Antigravity remote servers use `serverUrl`; WorkBuddy uses the `streamableHttp` type; writes follow each format automatically
+- The detail panel can show raw config and copy the current definition to agents detected on this machine
 - Every write backs up the original to `<file>.skills-manager.bak`; JSON / TOML edits only touch the target entry and preserve other fields and comments
 
 ### 4.4 Project-Level MCP
 
 The **MCP** tab on a project detail page reads and writes:
 
-- `<project>/.mcp.json` (Claude Code)
-- `<project>/.cursor/mcp.json` (Cursor)
-- `<project>/.grok/config.toml` (Grok)
+- `.mcp.json` (Claude Code)
+- `.cursor/mcp.json` (Cursor)
+- `.agents/mcp_config.json` (Antigravity, same format as global)
+- `.codex/config.toml` (Codex)
+- `.grok/config.toml` (Grok)
+- `opencode.json` (OpenCode)
+- `.kiro/settings/mcp.json` (Kiro)
+- `.kilo/kilo.json` (Kilo Code)
+- `.zcode/config.json` (ZCode)
+- `.github/mcp.json` (GitHub Copilot)
+- `.trae/mcp.json` (Trae)
+- `.qoder/settings.local.json` (Qoder)
+- `.codebuddy/mcp.json` (CodeBuddy)
+- `.kimi-code/mcp.json` (Kimi Code)
+- `.pi/mcp.json` (Pi)
+- `.omp/mcp.json` (OMP)
 
 ---
 
