@@ -227,7 +227,8 @@ MCP 页面聚合各 Agent 的 MCP server 配置，支持全局与项目级管理
 
 ### 4.3 启用、同步与删除
 
-- 配置格式原生支持 `enabled`（Codex / Grok / OpenCode / Cursor）时直接写回；其余（Claude / Antigravity）由应用托管停用状态，记录在 `~/.skills-manager/mcp-state.json`
+- 配置格式原生支持启用状态（Codex / Grok / OpenCode / Cursor 的 `enabled`，以及 Antigravity 的 `disabled`）时直接写回；Claude 由应用托管停用状态，记录在 `~/.skills-manager/mcp-state.json`
+- Antigravity 的远程 server 使用 `serverUrl` 字段，写回时自动按该格式处理
 - 详情面板可查看原始配置，并把当前定义同步到尚未绑定的 Agent
 - 写入前会备份为 `<原文件>.skills-manager.bak`；JSON / TOML 写回只改目标条目，保留其它字段与注释
 

@@ -227,7 +227,8 @@ Environment values and header values are masked in the detail panel by default.
 
 ### 4.3 Enable, Sync, and Delete
 
-- Formats with a native `enabled` flag (Codex / Grok / OpenCode / Cursor) are written directly; others (Claude / Antigravity) use a managed disabled state stored in `~/.skills-manager/mcp-state.json`
+- Formats with a native enable flag (Codex / Grok / OpenCode / Cursor `enabled`, Antigravity `disabled`) are written directly; Claude uses a managed disabled state stored in `~/.skills-manager/mcp-state.json`
+- Antigravity remote servers use `serverUrl`; writes follow that format automatically
 - The detail panel can show raw config and copy the current definition to agents that do not have it
 - Every write backs up the original to `<file>.skills-manager.bak`; JSON / TOML edits only touch the target entry and preserve other fields and comments
 
