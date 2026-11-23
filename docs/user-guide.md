@@ -188,7 +188,7 @@ Projects 页面把 skills 管理延伸到具体项目目录。
 
 应用只识别项目根目录下这些约定目录中、包含 `SKILL.md` 的一级子目录：
 
-`.claude/skills`、`.agents/skills`、`.cursor/skills`、`.codex/skills`、`.opencode/skills`、`.gemini/skills`、`.grok/skills`、`.kilocode/skills`
+`.claude/skills`、`.agents/skills`、`.cursor/skills`、`.codex/skills`、`.opencode/skills`、`.gemini/skills`、`.grok/skills`、`.kilocode/skills`、`.github/skills`、`.workbuddy/skills`、`.codebuddy/skills`、`.zcode/skills`、`.openclaw/skills`、`.kimi-code/skills`、`.marscode/skills`、`.openclaude/skills`、`.hermes/skills`、`.ima/skills`、`.trae/skills`、`.qoder/skills`、`.kiro/skills`、`.pi/skills`、`.omp/skills`
 
 ### 3.3 安装、导入与删除
 
@@ -210,10 +210,24 @@ MCP 页面聚合各 Agent 的 MCP server 配置，支持全局与项目级管理
 |-------|----------|
 | Claude Code | `~/.claude.json` |
 | Cursor | `~/.cursor/mcp.json` |
-| Antigravity / Gemini | `~/.gemini/config/mcp_config.json` |
+| Antigravity (GUI / CLI) | `~/.gemini/config/mcp_config.json` |
+| OpenClaw | `~/.openclaw/openclaw.json`（需为合法 JSON） |
 | OpenCode | `~/.config/opencode/opencode.json` |
 | Codex | `~/.codex/config.toml` |
 | Grok | `~/.grok/config.toml` |
+| Hermes Agent | `~/.hermes/config.yaml`（只重写 `mcp_servers` 段） |
+| WorkBuddy | `~/.workbuddy/mcp.json` |
+| ZCode | `~/.zcode/cli/config.json` |
+| Pi | `~/.pi/agent/mcp.json` |
+| OMP | `~/.omp/agent/mcp.json` |
+| Kiro | `~/.kiro/settings/mcp.json` |
+| Kilo Code | `~/.config/kilo/kilo.json` |
+| Kimi Code | `~/.kimi-code/mcp.json` |
+| GitHub Copilot | `~/.copilot/mcp-config.json` |
+| Trae | `~/.trae/mcp.json` |
+| Qoder | `~/.qoder/settings.json` |
+| CodeBuddy | `~/.codebuddy/mcp.json` |
+| MarsCode | `~/.marscode/vscode.mcp.config.json` |
 
 ### 4.2 新增与编辑
 
@@ -227,18 +241,31 @@ MCP 页面聚合各 Agent 的 MCP server 配置，支持全局与项目级管理
 
 ### 4.3 启用、同步与删除
 
-- 配置格式原生支持启用状态（Codex / Grok / OpenCode / Cursor 的 `enabled`，以及 Antigravity 的 `disabled`）时直接写回；Claude 由应用托管停用状态，记录在 `~/.skills-manager/mcp-state.json`
-- Antigravity 的远程 server 使用 `serverUrl` 字段，写回时自动按该格式处理
-- 详情面板可查看原始配置，并把当前定义同步到尚未绑定的 Agent
+- 配置格式原生支持启用状态（Codex / Grok / OpenCode / Kilo / ZCode / Pi / Kimi / OpenClaw / Hermes 的 `enabled`，Cursor / Antigravity / WorkBuddy / Kiro 的 `disabled`）时直接写回；其余 Agent 由应用托管停用状态，记录在 `~/.skills-manager/mcp-state.json`
+- Antigravity 的远程 server 使用 `serverUrl` 字段，WorkBuddy 使用 `streamableHttp` 类型，写回时自动按各自格式处理
+- 详情面板可查看原始配置，并把当前定义同步到本机已检测到的 Agent
 - 写入前会备份为 `<原文件>.skills-manager.bak`；JSON / TOML 写回只改目标条目，保留其它字段与注释
 
 ### 4.4 项目级 MCP
 
 项目详情页的 **MCP** tab 读写项目内的配置文件：
 
-- `<project>/.mcp.json`（Claude Code）
-- `<project>/.cursor/mcp.json`（Cursor）
-- `<project>/.grok/config.toml`（Grok）
+- `.mcp.json`（Claude Code）
+- `.cursor/mcp.json`（Cursor）
+- `.agents/mcp_config.json`（Antigravity，与全局同格式）
+- `.codex/config.toml`（Codex）
+- `.grok/config.toml`（Grok）
+- `opencode.json`（OpenCode）
+- `.kiro/settings/mcp.json`（Kiro）
+- `.kilo/kilo.json`（Kilo Code）
+- `.zcode/config.json`（ZCode）
+- `.github/mcp.json`（GitHub Copilot）
+- `.trae/mcp.json`（Trae）
+- `.qoder/settings.local.json`（Qoder）
+- `.codebuddy/mcp.json`（CodeBuddy）
+- `.kimi-code/mcp.json`（Kimi Code）
+- `.pi/mcp.json`（Pi）
+- `.omp/mcp.json`（OMP）
 
 ---
 

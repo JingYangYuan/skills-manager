@@ -65,7 +65,7 @@ Built-in agent presets currently include **Claude Code, Cursor, Google Antigravi
 
 ### Projects (Project-Level Skills)
 
-- Register any project root and scan conventional folders such as `.claude/skills`, `.agents/skills`, `.cursor/skills`, `.codex/skills`, `.opencode/skills`, `.gemini/skills`, `.grok/skills`, and `.kilocode/skills`
+- Register any project root and scan the project folders of 23 agents: `.claude/skills`, `.agents/skills`, `.cursor/skills`, `.codex/skills`, `.opencode/skills`, `.gemini/skills`, `.grok/skills`, `.kilocode/skills`, `.github/skills`, `.workbuddy/skills`, `.codebuddy/skills`, `.zcode/skills`, `.openclaw/skills`, `.kimi-code/skills`, `.marscode/skills`, `.openclaude/skills`, `.hermes/skills`, `.ima/skills`, `.trae/skills`, `.qoder/skills`, `.kiro/skills`, `.pi/skills`, and `.omp/skills`
 - Discover candidate projects from `~/.claude.json` and common project directories
 - Install central-library skills into a project (linked or copied according to the global strategy)
 - Import native project skills into the central library; delete managed links or move native folders to the trash (restorable)
@@ -73,10 +73,10 @@ Built-in agent presets currently include **Claude Code, Cursor, Google Antigravi
 
 ### MCP Management
 
-- Aggregate MCP servers from Claude Code, Cursor, Antigravity / Gemini, OpenCode, Codex, and Grok
+- Aggregate MCP servers from 20 agents: Claude Code, Cursor, Antigravity (GUI / CLI), OpenClaw, OpenCode, Codex, Grok, Hermes Agent, WorkBuddy, ZCode, Pi, OMP, Kiro, Kilo Code, Kimi Code, GitHub Copilot, Trae, Qoder, CodeBuddy, and MarsCode
 - Add / edit / delete and enable or disable per agent; conflicting definitions are flagged
 - Sync across agents; every write is backed up to `*.skills-manager.bak`, and JSON / TOML edits preserve other fields and comments
-- Project-level MCP: `<project>/.mcp.json`, `<project>/.cursor/mcp.json`, `<project>/.grok/config.toml`
+- Project-level MCP: `.mcp.json`, `.cursor/mcp.json`, `.agents/mcp_config.json` (Antigravity), `.codex/config.toml`, `.grok/config.toml`, `opencode.json`, `.kiro/settings/mcp.json`, `.kilo/kilo.json`, `.zcode/config.json`, `.github/mcp.json`, `.trae/mcp.json`, `.qoder/settings.local.json`, `.codebuddy/mcp.json`, `.kimi-code/mcp.json`, `.pi/mcp.json`, and `.omp/mcp.json`
 
 ### GitHub Backup and Distribution
 

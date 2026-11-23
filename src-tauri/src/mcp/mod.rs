@@ -1,9 +1,12 @@
 //! MCP 配置管理。
 //!
 //! 不同 agent 的 MCP 配置格式差异很大，这里把它们统一成 `McpServerDef`：
-//! - Claude / Cursor / Antigravity：`mcpServers` JSON
+//! - Claude / Cursor / Pi / OMP / WorkBuddy / ZCode / Kiro：`mcpServers` JSON
+//! - OpenClaw：`mcp.servers` JSON（`transport` 字段）
 //! - OpenCode：`mcp.servers` JSON（local / remote）
+//! - Kilo：顶层 `mcp.<name>`，形状与 OpenCode 相同
 //! - Codex / Grok：`[mcp_servers.*]` TOML
+//! - Hermes：`~/.hermes/config.yaml` 的 `mcp_servers` 段
 //!
 //! 写回时只改目标键，保留文件中的其它字段与注释（TOML 用 toml_edit）。
 
@@ -11,58 +14,289 @@ pub mod json_adapter;
 pub mod opencode_adapter;
 pub mod state;
 pub mod toml_adapter;
+pub mod yaml_adapter;
 
 use crate::models::{
     McpAgentInfo, McpBinding, McpConfigError, McpOverview, McpServerAggregate, McpServerDef,
 };
+use crate::projects::expand_path;
+use json_adapter::{EnabledStyle, JsonLayout, JsonSpec};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum McpFormat {
-    Json,
+    Json(JsonSpec),
     OpenCode,
+    /// Kilo Code：顶层 `mcp.<name>`，形状与 OpenCode 相同。
+    Kilo,
     Toml,
+    /// Hermes Agent：`~/.hermes/config.yaml` 的 `mcp_servers` 段。
+    Yaml,
 }
+
+pub const STANDARD_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "type",
+    http_type: Some("http"),
+    sse_type: Some("sse"),
+    stdio_type: Some("stdio"),
+    enabled: EnabledStyle::None,
+};
+
+/// Cursor 按 URL 推断传输方式，不写 `type`。
+pub const CURSOR_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "type",
+    http_type: None,
+    sse_type: None,
+    stdio_type: None,
+    enabled: EnabledStyle::Disabled,
+};
+
+/// Antigravity 用 `serverUrl` + `disabled`，不写 `type`。
+pub const ANTIGRAVITY_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "serverUrl",
+    type_key: "type",
+    http_type: None,
+    sse_type: None,
+    stdio_type: None,
+    enabled: EnabledStyle::Disabled,
+};
+
+/// WorkBuddy 的远程 type 为 `streamableHttp`。
+pub const WORKBUDDY_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "type",
+    http_type: Some("streamableHttp"),
+    sse_type: Some("sse"),
+    stdio_type: Some("stdio"),
+    enabled: EnabledStyle::Disabled,
+};
+
+/// ZCode 的 server 列表在 `mcp.servers` 下。
+pub const ZCODE_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Nested,
+    url_key: "url",
+    type_key: "type",
+    http_type: Some("http"),
+    sse_type: Some("sse"),
+    stdio_type: Some("stdio"),
+    enabled: EnabledStyle::Enabled,
+};
+
+/// OpenClaw 的 server 列表在 `mcp.servers` 下，远程传输字段为 `transport`。
+///
+/// 配置文件是 JSON5；只有当文件本身是合法 JSON（无注释、无尾逗号）时才能读写，
+/// 否则会在读取阶段报错，不会写入。
+pub const OPENCLAW_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Nested,
+    url_key: "url",
+    type_key: "transport",
+    http_type: Some("streamable-http"),
+    sse_type: Some("sse"),
+    stdio_type: None,
+    enabled: EnabledStyle::Enabled,
+};
+
+pub const PI_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "type",
+    http_type: Some("http"),
+    sse_type: None,
+    stdio_type: Some("stdio"),
+    enabled: EnabledStyle::Enabled,
+};
+
+pub const OMP_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "type",
+    http_type: Some("http"),
+    sse_type: Some("sse"),
+    stdio_type: Some("stdio"),
+    enabled: EnabledStyle::None,
+};
+
+/// Kiro 的 stdio server 不写 `type`，使用 `disabled`。
+pub const KIRO_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "type",
+    http_type: None,
+    sse_type: None,
+    stdio_type: None,
+    enabled: EnabledStyle::Disabled,
+};
+
+/// Kimi Code 用 `transport` 表示传输方式（sse / http）。
+pub const KIMI_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "transport",
+    http_type: None,
+    sse_type: Some("sse"),
+    stdio_type: None,
+    enabled: EnabledStyle::Enabled,
+};
+
+/// Trae 不写 `type`，按 command / url 推断。
+pub const TRAE_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "type",
+    http_type: None,
+    sse_type: None,
+    stdio_type: None,
+    enabled: EnabledStyle::None,
+};
+
+/// GitHub Copilot CLI 的 stdio type 为 `local`。
+pub const COPILOT_JSON: JsonSpec = JsonSpec {
+    layout: JsonLayout::Root,
+    url_key: "url",
+    type_key: "type",
+    http_type: Some("http"),
+    sse_type: Some("sse"),
+    stdio_type: Some("local"),
+    enabled: EnabledStyle::None,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct McpAgentSpec {
     pub agent: &'static str,
     pub label: &'static str,
     pub format: McpFormat,
+    /// 相对路径；全局配置以 `~/` 开头，项目配置相对项目根。
+    pub rel_path: &'static str,
 }
 
 pub const GLOBAL_AGENTS: &[McpAgentSpec] = &[
     McpAgentSpec {
         agent: "claude",
         label: "Claude Code",
-        format: McpFormat::Json,
+        format: McpFormat::Json(STANDARD_JSON),
+        rel_path: "~/.claude.json",
     },
     McpAgentSpec {
         agent: "cursor",
         label: "Cursor",
-        format: McpFormat::Json,
+        format: McpFormat::Json(CURSOR_JSON),
+        rel_path: "~/.cursor/mcp.json",
     },
     McpAgentSpec {
         agent: "antigravity",
-        label: "Antigravity / Gemini",
-        format: McpFormat::Json,
+        label: "Antigravity (GUI / CLI)",
+        format: McpFormat::Json(ANTIGRAVITY_JSON),
+        rel_path: "~/.gemini/config/mcp_config.json",
     },
     McpAgentSpec {
         agent: "opencode",
         label: "OpenCode",
         format: McpFormat::OpenCode,
+        rel_path: "~/.config/opencode/opencode.json",
+    },
+    McpAgentSpec {
+        agent: "openclaw",
+        label: "OpenClaw",
+        format: McpFormat::Json(OPENCLAW_JSON),
+        rel_path: "~/.openclaw/openclaw.json",
     },
     McpAgentSpec {
         agent: "codex",
         label: "Codex",
         format: McpFormat::Toml,
+        rel_path: "~/.codex/config.toml",
     },
     McpAgentSpec {
         agent: "grok",
         label: "Grok",
         format: McpFormat::Toml,
+        rel_path: "~/.grok/config.toml",
+    },
+    McpAgentSpec {
+        agent: "hermes",
+        label: "Hermes Agent",
+        format: McpFormat::Yaml,
+        rel_path: "~/.hermes/config.yaml",
+    },
+    McpAgentSpec {
+        agent: "workbuddy",
+        label: "WorkBuddy",
+        format: McpFormat::Json(WORKBUDDY_JSON),
+        rel_path: "~/.workbuddy/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "zcode",
+        label: "ZCode",
+        format: McpFormat::Json(ZCODE_JSON),
+        rel_path: "~/.zcode/cli/config.json",
+    },
+    McpAgentSpec {
+        agent: "pi",
+        label: "Pi",
+        format: McpFormat::Json(PI_JSON),
+        rel_path: "~/.pi/agent/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "omp",
+        label: "OMP",
+        format: McpFormat::Json(OMP_JSON),
+        rel_path: "~/.omp/agent/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "kiro",
+        label: "Kiro",
+        format: McpFormat::Json(KIRO_JSON),
+        rel_path: "~/.kiro/settings/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "kilo",
+        label: "Kilo Code",
+        format: McpFormat::Kilo,
+        rel_path: "~/.config/kilo/kilo.json",
+    },
+    McpAgentSpec {
+        agent: "kimi",
+        label: "Kimi Code",
+        format: McpFormat::Json(KIMI_JSON),
+        rel_path: "~/.kimi-code/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "copilot",
+        label: "GitHub Copilot",
+        format: McpFormat::Json(COPILOT_JSON),
+        rel_path: "~/.copilot/mcp-config.json",
+    },
+    McpAgentSpec {
+        agent: "trae",
+        label: "Trae",
+        format: McpFormat::Json(TRAE_JSON),
+        rel_path: "~/.trae/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "qoder",
+        label: "Qoder",
+        format: McpFormat::Json(STANDARD_JSON),
+        rel_path: "~/.qoder/settings.json",
+    },
+    McpAgentSpec {
+        agent: "codebuddy",
+        label: "CodeBuddy",
+        format: McpFormat::Json(STANDARD_JSON),
+        rel_path: "~/.codebuddy/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "marscode",
+        label: "MarsCode",
+        format: McpFormat::Json(STANDARD_JSON),
+        rel_path: "~/.marscode/vscode.mcp.config.json",
     },
 ];
 
@@ -70,17 +304,98 @@ pub const PROJECT_AGENTS: &[McpAgentSpec] = &[
     McpAgentSpec {
         agent: "claude",
         label: "Claude Code (.mcp.json)",
-        format: McpFormat::Json,
+        format: McpFormat::Json(STANDARD_JSON),
+        rel_path: ".mcp.json",
     },
     McpAgentSpec {
         agent: "cursor",
         label: "Cursor (.cursor/mcp.json)",
-        format: McpFormat::Json,
+        format: McpFormat::Json(CURSOR_JSON),
+        rel_path: ".cursor/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "antigravity",
+        label: "Antigravity (.agents/mcp_config.json)",
+        format: McpFormat::Json(ANTIGRAVITY_JSON),
+        rel_path: ".agents/mcp_config.json",
+    },
+    McpAgentSpec {
+        agent: "codex",
+        label: "Codex (.codex/config.toml)",
+        format: McpFormat::Toml,
+        rel_path: ".codex/config.toml",
     },
     McpAgentSpec {
         agent: "grok",
         label: "Grok (.grok/config.toml)",
         format: McpFormat::Toml,
+        rel_path: ".grok/config.toml",
+    },
+    McpAgentSpec {
+        agent: "opencode",
+        label: "OpenCode (opencode.json)",
+        format: McpFormat::OpenCode,
+        rel_path: "opencode.json",
+    },
+    McpAgentSpec {
+        agent: "kiro",
+        label: "Kiro (.kiro/settings/mcp.json)",
+        format: McpFormat::Json(KIRO_JSON),
+        rel_path: ".kiro/settings/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "kilo",
+        label: "Kilo Code (.kilo/kilo.json)",
+        format: McpFormat::Kilo,
+        rel_path: ".kilo/kilo.json",
+    },
+    McpAgentSpec {
+        agent: "zcode",
+        label: "ZCode (.zcode/config.json)",
+        format: McpFormat::Json(ZCODE_JSON),
+        rel_path: ".zcode/config.json",
+    },
+    McpAgentSpec {
+        agent: "copilot",
+        label: "GitHub Copilot (.github/mcp.json)",
+        format: McpFormat::Json(COPILOT_JSON),
+        rel_path: ".github/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "trae",
+        label: "Trae (.trae/mcp.json)",
+        format: McpFormat::Json(TRAE_JSON),
+        rel_path: ".trae/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "qoder",
+        label: "Qoder (.qoder/settings.local.json)",
+        format: McpFormat::Json(STANDARD_JSON),
+        rel_path: ".qoder/settings.local.json",
+    },
+    McpAgentSpec {
+        agent: "codebuddy",
+        label: "CodeBuddy (.codebuddy/mcp.json)",
+        format: McpFormat::Json(STANDARD_JSON),
+        rel_path: ".codebuddy/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "kimi",
+        label: "Kimi Code (.kimi-code/mcp.json)",
+        format: McpFormat::Json(KIMI_JSON),
+        rel_path: ".kimi-code/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "pi",
+        label: "Pi (.pi/mcp.json)",
+        format: McpFormat::Json(PI_JSON),
+        rel_path: ".pi/mcp.json",
+    },
+    McpAgentSpec {
+        agent: "omp",
+        label: "OMP (.omp/mcp.json)",
+        format: McpFormat::Json(OMP_JSON),
+        rel_path: ".omp/mcp.json",
     },
 ];
 
@@ -92,23 +407,11 @@ pub struct McpTarget {
 }
 
 pub fn global_targets() -> Vec<McpTarget> {
-    let home = dirs::home_dir().unwrap_or_default();
     GLOBAL_AGENTS
         .iter()
-        .map(|spec| {
-            let path = match spec.agent {
-                "claude" => home.join(".claude.json"),
-                "cursor" => home.join(".cursor").join("mcp.json"),
-                "antigravity" => home.join(".gemini").join("config").join("mcp_config.json"),
-                "opencode" => home.join(".config").join("opencode").join("opencode.json"),
-                "codex" => home.join(".codex").join("config.toml"),
-                "grok" => home.join(".grok").join("config.toml"),
-                _ => home.join(".skills-manager").join("unknown-mcp.json"),
-            };
-            McpTarget {
-                spec: *spec,
-                path,
-            }
+        .map(|spec| McpTarget {
+            spec: *spec,
+            path: expand_path(spec.rel_path),
         })
         .collect()
 }
@@ -116,17 +419,9 @@ pub fn global_targets() -> Vec<McpTarget> {
 pub fn project_targets(root: &Path) -> Vec<McpTarget> {
     PROJECT_AGENTS
         .iter()
-        .map(|spec| {
-            let path = match spec.agent {
-                "claude" => root.join(".mcp.json"),
-                "cursor" => root.join(".cursor").join("mcp.json"),
-                "grok" => root.join(".grok").join("config.toml"),
-                _ => root.join(".mcp.json"),
-            };
-            McpTarget {
-                spec: *spec,
-                path,
-            }
+        .map(|spec| McpTarget {
+            spec: *spec,
+            path: root.join(spec.rel_path),
         })
         .collect()
 }
@@ -146,45 +441,38 @@ pub fn project_target(root: &Path, agent: &str) -> Option<McpTarget> {
 /// 该 agent 的格式是否原生支持 enabled / disabled 字段。
 pub fn supports_enabled_flag(spec: &McpAgentSpec) -> bool {
     match spec.format {
-        McpFormat::Toml => true,
-        McpFormat::OpenCode => true,
-        McpFormat::Json => matches!(spec.agent, "cursor" | "antigravity"),
+        McpFormat::Toml | McpFormat::OpenCode | McpFormat::Kilo | McpFormat::Yaml => true,
+        McpFormat::Json(json) => json.enabled != EnabledStyle::None,
     }
 }
 
 pub fn read_servers(target: &McpTarget) -> Result<Vec<McpServerDef>, String> {
     match target.spec.format {
-        McpFormat::Json => json_adapter::read(&target.path),
+        McpFormat::Json(json) => json_adapter::read(&target.path, json),
         McpFormat::OpenCode => opencode_adapter::read(&target.path),
+        McpFormat::Kilo => opencode_adapter::read_flat(&target.path),
         McpFormat::Toml => toml_adapter::read(&target.path),
+        McpFormat::Yaml => yaml_adapter::read(&target.path),
     }
 }
 
 pub fn upsert_server(target: &McpTarget, def: &McpServerDef) -> Result<(), String> {
     match target.spec.format {
-        McpFormat::Json => {
-            if target.spec.agent == "antigravity" {
-                json_adapter::upsert_antigravity(&target.path, def)
-            } else {
-                let write_type = target.spec.agent == "claude";
-                json_adapter::upsert(
-                    &target.path,
-                    def,
-                    supports_enabled_flag(&target.spec),
-                    write_type,
-                )
-            }
-        }
+        McpFormat::Json(json) => json_adapter::upsert(&target.path, def, json),
         McpFormat::OpenCode => opencode_adapter::upsert(&target.path, def),
+        McpFormat::Kilo => opencode_adapter::upsert_flat(&target.path, def),
         McpFormat::Toml => toml_adapter::upsert(&target.path, def),
+        McpFormat::Yaml => yaml_adapter::upsert(&target.path, def),
     }
 }
 
 pub fn delete_server(target: &McpTarget, name: &str) -> Result<(), String> {
     match target.spec.format {
-        McpFormat::Json => json_adapter::delete(&target.path, name),
+        McpFormat::Json(json) => json_adapter::delete(&target.path, name, json),
         McpFormat::OpenCode => opencode_adapter::delete(&target.path, name),
+        McpFormat::Kilo => opencode_adapter::delete_flat(&target.path, name),
         McpFormat::Toml => toml_adapter::delete(&target.path, name),
+        McpFormat::Yaml => yaml_adapter::delete(&target.path, name),
     }
 }
 
@@ -194,17 +482,15 @@ pub fn delete_server(target: &McpTarget, name: &str) -> Result<(), String> {
 pub fn raw_section(target: &McpTarget) -> Result<String, String> {
     let defs: Vec<McpServerDef> = read_servers(target)?.iter().map(redact).collect();
     match target.spec.format {
-        McpFormat::Json => {
+        McpFormat::Json(json) => {
             let mut map = serde_json::Map::new();
             for def in &defs {
-                let value = if target.spec.agent == "antigravity" {
-                    json_adapter::def_to_value_antigravity(def)
-                } else {
-                    json_adapter::def_to_value(def)
-                };
-                map.insert(def.name.clone(), value);
+                map.insert(def.name.clone(), json_adapter::def_to_value(def, json));
             }
-            let root = serde_json::json!({ "mcpServers": map });
+            let root = match json.layout {
+                JsonLayout::Root => serde_json::json!({ "mcpServers": map }),
+                JsonLayout::Nested => serde_json::json!({ "mcp": { "servers": map } }),
+            };
             serde_json::to_string_pretty(&root)
                 .map_err(|e| format!("序列化 MCP 配置失败: {}", e))
         }
@@ -217,15 +503,27 @@ pub fn raw_section(target: &McpTarget) -> Result<String, String> {
             serde_json::to_string_pretty(&root)
                 .map_err(|e| format!("序列化 MCP 配置失败: {}", e))
         }
+        McpFormat::Kilo => {
+            let mut map = serde_json::Map::new();
+            for def in &defs {
+                map.insert(def.name.clone(), opencode_adapter::def_to_value(def));
+            }
+            let root = serde_json::json!({ "mcp": map });
+            serde_json::to_string_pretty(&root)
+                .map_err(|e| format!("序列化 MCP 配置失败: {}", e))
+        }
         McpFormat::Toml => toml_adapter::render(&defs),
+        McpFormat::Yaml => yaml_adapter::render(&defs),
     }
 }
 
 pub fn set_server_enabled(target: &McpTarget, name: &str, enabled: bool) -> Result<(), String> {
     match target.spec.format {
-        McpFormat::Json => json_adapter::set_enabled(&target.path, name, enabled),
+        McpFormat::Json(json) => json_adapter::set_enabled(&target.path, name, enabled, json),
         McpFormat::OpenCode => opencode_adapter::set_enabled(&target.path, name, enabled),
+        McpFormat::Kilo => opencode_adapter::set_enabled_flat(&target.path, name, enabled),
         McpFormat::Toml => toml_adapter::set_enabled(&target.path, name, enabled),
+        McpFormat::Yaml => yaml_adapter::set_enabled(&target.path, name, enabled),
     }
 }
 

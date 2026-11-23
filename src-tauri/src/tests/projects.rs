@@ -49,7 +49,7 @@ fn scan_project_skills_reads_known_dirs() {
     let skills = projects::scan_project_skills(&project_for(&root));
     assert_eq!(skills.len(), 2);
     assert!(skills.iter().any(|s| s.id == "alpha" && s.agent == "claude"));
-    assert!(skills.iter().any(|s| s.id == "beta" && s.agent == "agents"));
+    assert!(skills.iter().any(|s| s.id == "beta" && s.agent == "antigravity"));
     assert!(skills.iter().all(|s| s.rel_dir.contains("/skills/")));
 
     fs::remove_dir_all(&root).ok();

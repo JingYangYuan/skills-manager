@@ -282,6 +282,9 @@ export function McpServerForm({
                       className="text-sm"
                     />
                     {agent.label}
+                    {!agent.exists && (
+                      <span className="opacity-60">· {t('mcp.notDetected')}</span>
+                    )}
                   </button>
                 );
               })}

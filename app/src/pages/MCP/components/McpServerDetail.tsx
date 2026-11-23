@@ -37,7 +37,9 @@ export function McpServerDetail({
   if (!server) return null;
 
   const bindingAgents = server.bindings.map((binding) => binding.agent);
+  // 只同步到本机已检测到的 agent，避免为未安装的工具创建无意义配置。
   const syncTargets = agents
+    .filter((agent) => agent.exists)
     .map((agent) => agent.agent)
     .filter((agent) => !bindingAgents.includes(agent));
 
