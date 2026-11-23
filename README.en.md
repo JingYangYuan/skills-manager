@@ -34,7 +34,7 @@ It is designed for a few practical workflows:
 - **Reduce fragmentation**: manage skills from multiple agents in one UI instead of jumping between folders.
 - **Reuse skills faster**: link or copy the same skill into different agents with less manual work.
 - **Back up and migrate cleanly**: sync your skills repository to GitHub and restore it on a new machine.
-- **Discover useful skills**: browse, search, and install community skills from the built-in Marketplace.
+- **Discover useful skills**: browse, search, and install community skills and MCP servers from the built-in Market.
 
 Built-in agent presets currently include **Claude Code, Cursor, Google Antigravity (GUI), Antigravity CLI, Codex, GitHub Copilot, WorkBuddy, ZCode, OpenClaw, OpenCode, Kimi Code, MarsCode, OpenClaude, Hermes Agent, Grok, CodeBuddy, IMA Copilot, Kilo Code, Trae, Qoder, Kiro, Pi, and OMP** (23 in total).
 
@@ -42,13 +42,24 @@ Built-in agent presets currently include **Claude Code, Cursor, Google Antigravi
 
 ## Features
 
-### Marketplace
+### Market (Skills + MCP)
+
+Use the switch at the top of the Market page to choose **Skills** or **MCP**.
+
+Skills:
 
 - Browse community skills from `skills.sh`
 - Switch between **All Time / Trending / Hot** rankings
 - Search by name or description
 - Preview `SKILL.md`, stats, and install targets
 - Install to Root or a specific agent in one click
+
+MCP:
+
+- **Featured**: 29 curated servers (GitHub, Context7, Playwright, Notion, Linear, Supabase, etc.) with category filters
+- **All / Search**: live results from the official [MCP Registry](https://registry.modelcontextprotocol.io), with remote (Streamable HTTP / SSE), npm, PyPI, and Docker install options. The official search matches names only and requires at least 3 characters
+- **Targets**: install to multiple global agents and registered projects at once; required env / header / URL variables / arguments are collected before writing
+- **Security**: secret inputs are masked; install records store versions and targets but never env / header values; same-name overwrite and trusted-source confirmations are required
 
 ![Marketplace](docs/screen-shot/ScreenShot_Marketplace-1.png)
 ![Skill Details](docs/screen-shot/ScreenShot_Marketplace-2.png)
@@ -75,6 +86,7 @@ Built-in agent presets currently include **Claude Code, Cursor, Google Antigravi
 
 - Aggregate MCP servers from 20 agents: Claude Code, Cursor, Antigravity (GUI / CLI), OpenClaw, OpenCode, Codex, Grok, Hermes Agent, WorkBuddy, ZCode, Pi, OMP, Kiro, Kilo Code, Kimi Code, GitHub Copilot, Trae, Qoder, CodeBuddy, and MarsCode
 - Add / edit / delete and enable or disable per agent; conflicting definitions are flagged
+- Install official Registry entries from the Market's MCP tab into global agents and projects
 - Sync across agents; every write is backed up to `*.skills-manager.bak`, and JSON / TOML edits preserve other fields and comments
 - Project-level MCP: `.mcp.json`, `.cursor/mcp.json`, `.agents/mcp_config.json` (Antigravity), `.codex/config.toml`, `.grok/config.toml`, `opencode.json`, `.kiro/settings/mcp.json`, `.kilo/kilo.json`, `.zcode/config.json`, `.github/mcp.json`, `.trae/mcp.json`, `.qoder/settings.local.json`, `.codebuddy/mcp.json`, `.kimi-code/mcp.json`, `.pi/mcp.json`, and `.omp/mcp.json`
 
@@ -232,7 +244,7 @@ skills-manager/
 | Port 5173 is busy | Free the port or change the Vite port config |
 | macOS OpenSSL issues | Check `OPENSSL_DIR` and `PKG_CONFIG_PATH` |
 | Skill list is empty | Make sure the agent is installed, the path exists, and `SKILL.md` is present, then rescan in the app |
-| Marketplace will not load | Check network access to `skills.sh` |
+| Market will not load | Check network access to `skills.sh`; the MCP market also needs access to `registry.modelcontextprotocol.io` |
 | GitHub backup fails | Verify the token has repo read/write permissions and the repository config is correct |
 | Skill install fails | Make sure the target agent directory exists and is writable, and check disk space |
 

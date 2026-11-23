@@ -48,26 +48,26 @@ Skills Manager 是一款面向 macOS / Windows 的桌面应用，用来管理多
 
 | 入口 | 功能 |
 |------|------|
-| **Marketplace** | 浏览社区 skills，选择目标位置后下载到 Root 或指定 Agent |
+| **市场** | 浏览社区 skills 与官方 MCP Registry，选择目标位置后下载到 Root、指定 Agent 或项目 |
 | **Installed** | 查看本机已发现的 skills，并按来源筛选、启用、导入、删除 |
 | **Projects** | 注册项目，查看并管理项目内的 skills 与 MCP |
 | **MCP** | 聚合各 Agent 的 MCP server，支持新增、编辑、启停与跨 Agent 同步 |
 | **GitHub Backup** | 将 skills 同步到 GitHub，或从远程恢复 |
 | **Settings** | 配置语言、外观、Advanced、Agent 管理与关于信息 |
 
-默认打开的是 **Marketplace**。
+默认打开的是 **市场**。
 
 常用快捷键：
 
-- `Ctrl/Cmd + A`：打开 Marketplace
+- `Ctrl/Cmd + A`：打开市场
 - `Ctrl/Cmd + S`：打开 Installed
 - `Ctrl/Cmd + D`：打开 GitHub Backup
 
 ---
 
-## 1. Marketplace
+## 1. Market（技能 + MCP）
 
-Marketplace 用于浏览和安装来自 `skills.sh` 的社区 skills。
+Market 用于浏览和安装来自 `skills.sh` 的社区 skills，以及来自官方 MCP Registry 的 MCP server。页面顶部可以在 **技能** 与 **MCP** 之间切换。
 
 ### 1.1 榜单与搜索
 
@@ -93,6 +93,28 @@ Marketplace 用于浏览和安装来自 `skills.sh` 的社区 skills。
 - 点击技能卡片可查看详情
 - 详情区会显示描述、预览内容、来源信息等
 - 点击下载后，应用会把 skill 保存到你当前选中的目标位置
+
+### 1.4 MCP 市场
+
+MCP 市场包含三个页签：
+
+- **精选**：内置 29 个常用 MCP server，可按开发、搜索、浏览器、效率、设计、数据等分类筛选
+- **全部**：实时读取官方 MCP Registry，默认按名称 A-Z 排序，支持分页加载
+- **已安装**：通过市场安装过的记录，可重新安装或移除记录（仅移除记录，不修改 Agent 配置）
+
+搜索与安装：
+
+- 官方 Registry 的搜索只匹配 server 名称，且至少需要 3 个字符
+- 点击卡片打开详情，查看安装方式（远程 Streamable HTTP / SSE、npm、PyPI、Docker）、仓库与安全提示
+- 点击「安装」后选择安装方式，填写必填的 env / header / URL 变量 / 参数；密钥字段使用密码输入框
+- 可同时勾选多个全局 Agent，以及一个或多个已注册项目及其项目级目标
+- 同名 server 默认不会覆盖；勾选「覆盖同名 MCP server」后才会替换
+- 需要勾选来源可信确认，安装后才会写入配置
+
+安装记录保存在 `~/.skills-manager/mcp-installs.json`，只包含 registry 名称、本地名称、版本与安装目标，不包含 env / header 的值。MCP server 可能执行本地命令或访问第三方服务，请只安装可信来源。
+
+![技能市场](screen-shot/ScreenShot_Marketplace-1.png)
+![技能详情](screen-shot/ScreenShot_Marketplace-2.png)
 
 ---
 
@@ -426,8 +448,15 @@ description: 技能的简要描述
 - 该 skill 只有 Agent 原生来源，没有可删除的 Root 副本
 - 当前版本的删除弹窗仍会保护原生 Agent 来源条目
 
-### Marketplace 无法下载
+### 市场技能无法下载
 
 - 检查网络是否可以访问 `skills.sh`
 - 检查目标安装位置是否可写
 - 若安装到指定 Agent，确认该 Agent 已被正确检测到
+
+### MCP 市场无法加载或安装
+
+- 检查网络是否可以访问 `registry.modelcontextprotocol.io`
+- 搜索词至少需要 3 个字符，且官方 Registry 只匹配名称
+- 安装 npm / PyPI / Docker 类型的 server 时，确认本机已安装 `npx` / `uvx` / `docker`
+- 若提示同名 server 已存在，勾选「覆盖同名 MCP server」后重试

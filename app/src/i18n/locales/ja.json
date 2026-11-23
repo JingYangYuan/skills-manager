@@ -4,11 +4,11 @@
     "version": "v1.0.0"
   },
   "nav": {
-    "marketplace": "スキルマーケットプレイス",
+    "marketplace": "マーケットプレイス",
     "installed": "インストール済み",
     "backup": "バックアップ",
     "dashboard": "インストール済み",
-    "skillDownload": "スキルマーケットプレイス",
+    "skillDownload": "マーケットプレイス",
     "githubBackup": "バックアップ",
     "settings": "設定",
     "expand": "展開",
@@ -17,7 +17,7 @@
     "mcp": "MCP"
   },
   "header": {
-    "marketplace": "スキルマーケットプレイス",
+    "marketplace": "マーケットプレイス",
     "dashboard": "インストール済み",
     "githubBackup": "GitHubバックアップ",
     "settings": "設定",
@@ -25,7 +25,11 @@
     "profile": "プロフィール"
   },
   "marketplace": {
-    "title": "スキルマーケットプレイス",
+    "title": "マーケットプレイス",
+    "kind": {
+      "skill": "スキル",
+      "mcp": "MCP"
+    },
     "search": "スキルを検索...",
     "searchFull": "スキル名、説明、またはカテゴリを検索...",
     "filterAll": "すべて",
@@ -35,6 +39,111 @@
     "disable": "無効にする",
     "install": "インストール",
     "uninstall": "アンインストール"
+  },
+  "mcpMarket": {
+    "searchPlaceholder": "MCP サーバー名で検索（3 文字以上）",
+    "searchHint": "公式 Registry の検索は名前のみ対象です",
+    "searchTooShort": "検索語は 3 文字以上必要です",
+    "searchResultCount": "検索結果 {{count}} 件",
+    "sourceRegistry": "Registry",
+    "sourceRegistryHint": "公式 MCP Registry から取得（名前の A-Z 順）",
+    "categoryAll": "すべて",
+    "tabs": {
+      "featured": "おすすめ",
+      "all": "すべて",
+      "installed": "インストール済み"
+    },
+    "count": "{{count}} 個の MCP サーバー",
+    "installedCount": "インストール済み {{count}} 件",
+    "installedBadge": "インストール済み",
+    "loading": "読み込み中...",
+    "loadMore": "さらに読み込む",
+    "emptyFeatured": "おすすめはまだありません",
+    "emptyAll": "一致する MCP サーバーがありません",
+    "emptyInstalled": "マーケットプレイスからインストールした MCP サーバーはまだありません",
+    "noDescription": "説明なし",
+    "error": "読み込みに失敗しました: {{error}}",
+    "actionFailed": "操作に失敗しました",
+    "categories": {
+      "dev": "開発",
+      "files": "ファイル",
+      "search": "検索",
+      "ai": "AI",
+      "browser": "ブラウザ",
+      "productivity": "生産性",
+      "design": "デザイン",
+      "data": "データ"
+    },
+    "installKinds": {
+      "remote": "リモート",
+      "npm": "npm",
+      "pypi": "PyPI",
+      "oci": "Docker",
+      "mcpb": "MCPB",
+      "cargo": "Cargo",
+      "nuget": "NuGet",
+      "package": "パッケージ"
+    },
+    "inputKinds": {
+      "env": "環境変数",
+      "header": "ヘッダー",
+      "argument": "引数",
+      "variable": "URL 変数"
+    },
+    "detail": {
+      "version": "バージョン",
+      "repository": "リポジトリ",
+      "website": "ウェブサイト",
+      "installWays": "インストール方法",
+      "noInstallWays": "利用可能なインストール方法がありません",
+      "loadingDetail": "インストール方法を取得中...",
+      "unsupportedShort": "未対応",
+      "unsupported": "自動インストール未対応：{{reason}}",
+      "security": "セキュリティ注意",
+      "securityDesc": "MCP サーバーはローカルコマンドの実行、ファイルの読み取り、サードパーティサービスへのアクセスを行う場合があります。信頼できる提供元のみインストールしてください。",
+      "publishedAt": "公開日",
+      "updatedAt": "更新日",
+      "install": "インストール"
+    },
+    "install": {
+      "title": "{{name}} をインストール",
+      "optionTitle": "インストール方法",
+      "localName": "ローカル名",
+      "localNameHint": "Agent 設定に書き込むサーバー名",
+      "localNameRequired": "ローカル名を入力してください",
+      "localNameInvalid": "ローカル名にスラッシュは使用できません",
+      "inputs": "設定項目",
+      "noInputs": "このインストール方法に追加設定はありません",
+      "required": "必須",
+      "valuesRequired": "{{label}} を入力してください",
+      "globalTargets": "グローバル Agent",
+      "projectTargets": "プロジェクト",
+      "noProjects": "登録済みプロジェクトがありません",
+      "selectAllDetected": "検出済みを全選択",
+      "clearTargets": "クリア",
+      "targetsRequired": "グローバル Agent またはプロジェクトを 1 つ以上選択してください",
+      "projectTargetsRequired": "プロジェクト {{name}} のターゲットを 1 つ以上選択してください",
+      "enabled": "インストール後に有効化",
+      "overwrite": "同名 MCP サーバーを上書き",
+      "trusted": "この MCP サーバーの提供元が信頼できること、およびローカルコマンドの実行やサードパーティサービスへのアクセスの可能性を理解しました",
+      "trustedRequired": "提供元が信頼できることを確認してください",
+      "install": "インストール",
+      "installing": "インストール中...",
+      "success": "{{name}} をインストールしました",
+      "successWithWarnings": "{{name}} をインストールしました（{{count}} 件の注意）",
+      "warningList": "インストール時の注意",
+      "notDetected": "未検出",
+      "targetSummary": "グローバル {{global}} · プロジェクト {{project}}"
+    },
+    "installed": {
+      "localName": "ローカル名",
+      "installedAt": "インストール日時",
+      "reinstall": "再インストール",
+      "forget": "記録を削除",
+      "forgotten": "インストール記録を削除しました",
+      "globalTarget": "グローバル {{agent}}",
+      "projectTarget": "プロジェクト {{project}} / {{target}}"
+    }
   },
   "skillDownload": {
     "storagePath": "保存先",

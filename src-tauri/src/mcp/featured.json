@@ -1,0 +1,463 @@
+{
+  "generatedAt": "2026-11-23",
+  "items": [
+    {
+      "registryName": "io.github.github/github-mcp-server",
+      "title": "GitHub",
+      "description": "Connect AI assistants to GitHub - manage repos, issues, PRs, and workflows through natural language.",
+      "version": "2.2.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/github/github-mcp-server",
+      "websiteUrl": null,
+      "categories": [
+        "dev"
+      ],
+      "installKinds": [
+        "remote",
+        "oci"
+      ]
+    },
+    {
+      "registryName": "io.github.upstash/context7",
+      "title": "Context7",
+      "description": "Up-to-date docs for AI agents",
+      "version": "4.7.3",
+      "iconUrl": "https://raw.githubusercontent.com/upstash/context7/master/public/icon.png",
+      "repositoryUrl": "https://github.com/upstash/context7",
+      "websiteUrl": "https://context7.com",
+      "categories": [
+        "dev"
+      ],
+      "installKinds": [
+        "remote",
+        "npm",
+        "mcpb"
+      ]
+    },
+    {
+      "registryName": "io.github.containers/kubernetes-mcp-server",
+      "title": "",
+      "description": "A Model Context Protocol (MCP) server for Kubernetes and OpenShift",
+      "version": "0.1.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/containers/kubernetes-mcp-server",
+      "websiteUrl": null,
+      "categories": [
+        "dev"
+      ],
+      "installKinds": [
+        "npm",
+        "pypi",
+        "oci"
+      ]
+    },
+    {
+      "registryName": "io.github.bytedance/mcp-server-filesystem",
+      "title": "",
+      "description": "MCP server for filesystem access",
+      "version": "1.0.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/bytedance/UI-TARS-desktop",
+      "websiteUrl": null,
+      "categories": [
+        "dev",
+        "files"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "io.github.domdomegg/filesystem-mcp",
+      "title": "Filesystem",
+      "description": "Read, create, and edit files.",
+      "version": "2.0.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/domdomegg/filesystem-mcp.git",
+      "websiteUrl": "https://github.com/domdomegg/filesystem-mcp#readme",
+      "categories": [
+        "dev",
+        "files"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "io.github.arben-adm/mcp-sequential-thinking",
+      "title": "Sequential Thinking Working Notes",
+      "description": "Local working notes, decisions, evidence and resumable sessions with SQLite persistence.",
+      "version": "0.7.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/arben-adm/mcp-sequential-thinking",
+      "websiteUrl": null,
+      "categories": [
+        "ai"
+      ],
+      "installKinds": [
+        "pypi"
+      ]
+    },
+    {
+      "registryName": "ai.exa/exa",
+      "title": "Exa",
+      "description": "Official Exa MCP for web search, content fetching, and multi-step research.",
+      "version": "3.5.1",
+      "iconUrl": "https://exa.ai/images/logo/exa-logomark-blue.svg",
+      "repositoryUrl": "https://github.com/exa-labs/exa-mcp-server",
+      "websiteUrl": "https://exa.ai",
+      "categories": [
+        "search",
+        "ai"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "ai.perplexity/mcp-server",
+      "title": "Perplexity API Platform",
+      "description": "Real-time web search, reasoning, and research through Perplexity's API",
+      "version": "1.2.1",
+      "iconUrl": null,
+      "repositoryUrl": null,
+      "websiteUrl": null,
+      "categories": [
+        "search",
+        "ai"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "io.github.tavily-ai/tavily-mcp",
+      "title": "",
+      "description": "MCP server for advanced web search using Tavily",
+      "version": "0.2.15",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/tavily-ai/tavily-mcp",
+      "websiteUrl": null,
+      "categories": [
+        "search"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "io.github.brave/brave-search-mcp-server",
+      "title": "",
+      "description": "Brave Search MCP Server: web results, images, videos, rich results, AI summaries, and more.",
+      "version": "2.2.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/brave/brave-search-mcp-server",
+      "websiteUrl": null,
+      "categories": [
+        "search"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "io.github.firecrawl/firecrawl-mcp-server",
+      "title": "Firecrawl MCP Server",
+      "description": "Firecrawl, the context API for AI agents: search, scrape, interact with the web, plus paper search.",
+      "version": "3.41.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/firecrawl/firecrawl-mcp-server.git",
+      "websiteUrl": null,
+      "categories": [
+        "search"
+      ],
+      "installKinds": [
+        "remote",
+        "npm"
+      ]
+    },
+    {
+      "registryName": "io.github.microsoft/playwright-mcp",
+      "title": "",
+      "description": "Playwright Tools for MCP",
+      "version": "0.0.86",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/microsoft/playwright-mcp",
+      "websiteUrl": null,
+      "categories": [
+        "browser",
+        "dev"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "io.github.ChromeDevTools/chrome-devtools-mcp",
+      "title": "Chrome DevTools MCP",
+      "description": "MCP server for Chrome DevTools",
+      "version": "1.13.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "websiteUrl": null,
+      "categories": [
+        "browser",
+        "dev"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "io.github.browserbase/mcp-server-browserbase",
+      "title": "",
+      "description": "MCP server for AI web browser automation using Browserbase and Stagehand",
+      "version": "2.1.1",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/browserbase/mcp-server-browserbase",
+      "websiteUrl": null,
+      "categories": [
+        "browser"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "com.notion/mcp",
+      "title": "",
+      "description": "Official Notion MCP server",
+      "version": "1.0.1",
+      "iconUrl": null,
+      "repositoryUrl": null,
+      "websiteUrl": null,
+      "categories": [
+        "productivity"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "app.linear/linear",
+      "title": "Linear",
+      "description": "Find and manage issues, projects, and documents in your Linear workspace.",
+      "version": "1.0.2",
+      "iconUrl": "https://static.linear.app/integrations/mcp/icon.svg",
+      "repositoryUrl": null,
+      "websiteUrl": "https://linear.app",
+      "categories": [
+        "productivity"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "com.atlassian/atlassian-mcp-server",
+      "title": "Atlassian Rovo MCP Server",
+      "description": "Connect to Atlassian Jira, Confluence, Loom, and more to search, create, and manage your work.",
+      "version": "2.0.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/atlassian/atlassian-mcp-server",
+      "websiteUrl": "https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/",
+      "categories": [
+        "productivity"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "com.figma.mcp/mcp",
+      "title": "Figma MCP Server",
+      "description": "The Figma MCP server brings Figma design context directly into your AI workflow.",
+      "version": "1.0.3",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/figma/mcp-server-guide",
+      "websiteUrl": null,
+      "categories": [
+        "design",
+        "productivity"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "com.airtable/mcp",
+      "title": "",
+      "description": "Official Airtable MCP server — database and operations layer for agents.",
+      "version": "0.1.0",
+      "iconUrl": null,
+      "repositoryUrl": null,
+      "websiteUrl": null,
+      "categories": [
+        "productivity",
+        "data"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "com.pulsemcp/slack",
+      "title": "",
+      "description": "MCP server for Slack — read/write messages, manage threads, and react to messages.",
+      "version": "0.0.7",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/pulsemcp/mcp-servers",
+      "websiteUrl": null,
+      "categories": [
+        "productivity"
+      ],
+      "installKinds": [
+        "npm"
+      ]
+    },
+    {
+      "registryName": "ai.waystation/gmail",
+      "title": "",
+      "description": "Read emails, send messages, and manage labels in your Gmail account.",
+      "version": "0.3.1",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/waystation-ai/mcp",
+      "websiteUrl": null,
+      "categories": [
+        "productivity"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "com.supabase/mcp",
+      "title": "Supabase",
+      "description": "MCP server for interacting with the Supabase platform",
+      "version": "0.19.0",
+      "iconUrl": "https://supabase.com/favicon/favicon-16x16.png",
+      "repositoryUrl": "https://github.com/supabase/mcp",
+      "websiteUrl": "https://supabase.com/mcp",
+      "categories": [
+        "data",
+        "dev"
+      ],
+      "installKinds": [
+        "remote",
+        "npm"
+      ]
+    },
+    {
+      "registryName": "com.neon/mcp",
+      "title": "Neon",
+      "description": "Official Neon MCP server for managing Neon projects and Lakebase Postgres databases.",
+      "version": "2.0.0",
+      "iconUrl": "https://neon.com/brand/neon-logomark-light-color.svg",
+      "repositoryUrl": "https://github.com/neondatabase/mcp-server-neon",
+      "websiteUrl": "https://neon.com/docs/ai/neon-mcp-server",
+      "categories": [
+        "data",
+        "dev"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "com.cloudflare.mcp/mcp",
+      "title": "",
+      "description": "Cloudflare MCP servers",
+      "version": "1.0.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/cloudflare/mcp-server-cloudflare",
+      "websiteUrl": null,
+      "categories": [
+        "dev",
+        "data"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "com.stripe/mcp",
+      "title": "",
+      "description": "MCP server integrating with Stripe - tools for customers, products, payments, and more.",
+      "version": "0.2.4",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/stripe/agent-toolkit",
+      "websiteUrl": null,
+      "categories": [
+        "productivity",
+        "data"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "io.github.mongodb-js/mongodb-mcp-server",
+      "title": "",
+      "description": "MongoDB Model Context Protocol Server",
+      "version": "3.3.0",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/mongodb-js/mongodb-mcp-server",
+      "websiteUrl": null,
+      "categories": [
+        "data",
+        "dev"
+      ],
+      "installKinds": [
+        "npm",
+        "oci"
+      ]
+    },
+    {
+      "registryName": "dev.xakpc/sqlite-mcp-sidecar",
+      "title": "SQLite MCP Sidecar",
+      "description": "Agent-safe MCP sidecar for one live SQLite database: read-only default, bounded writes.",
+      "version": "0.1.3",
+      "iconUrl": null,
+      "repositoryUrl": "https://github.com/xakpc/sqlite-mcp-sidecar",
+      "websiteUrl": "https://xakpc.dev",
+      "categories": [
+        "data"
+      ],
+      "installKinds": [
+        "oci"
+      ]
+    },
+    {
+      "registryName": "co.huggingface/hf-mcp-server",
+      "title": "Hugging Face",
+      "description": "Connect to Hugging Face Hub and thousands of Gradio AI Applications",
+      "version": "0.2.33",
+      "iconUrl": null,
+      "repositoryUrl": null,
+      "websiteUrl": null,
+      "categories": [
+        "ai"
+      ],
+      "installKinds": [
+        "remote"
+      ]
+    },
+    {
+      "registryName": "io.github.redis/mcp-redis",
+      "title": "Redis MCP Server",
+      "description": "Natural language interface designed for agentic applications to manage and search data in Redis.",
+      "version": "0.5.1",
+      "iconUrl": null,
+      "repositoryUrl": null,
+      "websiteUrl": null,
+      "categories": [
+        "data",
+        "dev"
+      ],
+      "installKinds": [
+        "pypi",
+        "oci"
+      ]
+    }
+  ]
+}

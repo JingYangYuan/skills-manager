@@ -7,6 +7,12 @@ const files = [
   'app/src/pages/Dashboard/components/DashboardLayout/DashboardMain.tsx',
   'app/src/pages/Dashboard/components/SkillCard.tsx',
   'app/src/pages/Dashboard/index.tsx',
+  'app/src/pages/Marketplace/index.tsx',
+  'app/src/pages/Marketplace/McpMarket.tsx',
+  'app/src/pages/Marketplace/components/MarketplaceKindSwitch.tsx',
+  'app/src/pages/Marketplace/components/McpMarketCard.tsx',
+  'app/src/pages/Marketplace/components/McpMarketDetail.tsx',
+  'app/src/pages/Marketplace/components/McpInstallDialog.tsx',
   'app/src/pages/Settings/components/TrashSection.tsx',
   'app/src/pages/Settings/index.tsx',
 ];

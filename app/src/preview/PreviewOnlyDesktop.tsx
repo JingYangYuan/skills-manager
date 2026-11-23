@@ -28,10 +28,10 @@ const COPY: Record<PreviewOnlyDesktopProps['feature'], { titleZh: string; descZh
     descEn: 'Agent discovery, link strategy and tray preferences rely on native file-system and window APIs, only available in the desktop app.',
   },
   marketplace: {
-    titleZh: '技能市场仅桌面端可用',
-    descZh: '技能市场需要通过本地 Git 克隆仓库并写入文件系统，浏览器环境无法完成此操作，请下载桌面版体验完整功能。',
-    titleEn: 'Marketplace is desktop-only',
-    descEn: 'The marketplace clones skill repos via Git and writes to your local file system — not possible in the browser. Download the desktop app to get the full experience.',
+    titleZh: '市场仅桌面端可用',
+    descZh: '市场需要写入本地 Agent / 项目配置，并可能通过 npx / uvx / docker 启动 MCP server，浏览器环境无法完成这些操作，请下载桌面版体验完整功能。',
+    titleEn: 'Market is desktop-only',
+    descEn: 'The market writes local agent / project configs and may launch MCP servers through npx / uvx / docker — not possible in the browser. Download the desktop app to get the full experience.',
   },
 };
 

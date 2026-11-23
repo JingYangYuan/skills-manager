@@ -34,7 +34,7 @@
 - **分散を減らす**: 複数 Agent の skills を 1 つの UI で管理し、フォルダ間を行き来する手間を減らします。
 - **再利用を速くする**: 同じ skill をリンクまたはコピーして、複数の Agent にすばやく配布できます。
 - **バックアップと移行を簡単にする**: skills リポジトリを GitHub に同期し、新しいマシンで復元できます。
-- **便利な skills を見つける**: 内蔵 Marketplace からコミュニティの skills を検索、プレビュー、インストールできます。
+- **便利な skills を見つける**: 内蔵 Market からコミュニティの skills と MCP サーバーを検索、プレビュー、インストールできます。
 
 現在の組み込み Agent プリセットは **Claude Code, Cursor, Codex, OpenClaw, OpenCode, Trae, Qoder, Antigravity, Kiro** です。
 
@@ -42,13 +42,24 @@
 
 ## 機能概要
 
-### Marketplace
+### Market（Skills + MCP）
+
+Market ページ上部の切り替えで **Skills** と **MCP** を選択できます。
+
+Skills:
 
 - `skills.sh` のコミュニティ skills を閲覧
 - **All Time / Trending / Hot** ランキングの切り替え
 - 名前または説明で検索
 - `SKILL.md`、統計情報、インストール先をプレビュー
 - Root または特定の Agent にワンクリックでインストール
+
+MCP:
+
+- **Featured**: GitHub、Context7、Playwright、Notion、Linear、Supabase など 29 個の厳選サーバーをカテゴリで絞り込み
+- **All / 検索**: 公式 [MCP Registry](https://registry.modelcontextprotocol.io) をリアルタイムで参照し、リモート（Streamable HTTP / SSE）、npm、PyPI、Docker のインストール方法に対応。公式検索は名前のみを対象とし、3 文字以上が必要です
+- **インストール先**: 複数のグローバル Agent と登録済みプロジェクトを同時に選択でき、必須の env / header / URL 変数 / 引数を入力してから書き込みます
+- **安全対策**: 秘密値はマスク表示され、インストール記録にはバージョンと対象だけを保存します（env / header の値は保存しません）
 
 ![Marketplace](docs/screen-shot/ScreenShot_Marketplace-1.png)
 ![Skill Details](docs/screen-shot/ScreenShot_Marketplace-2.png)
@@ -217,7 +228,7 @@ skills-manager/
 | ポート 5173 が使用中 | ポートを解放するか、Vite のポート設定を変更する |
 | macOS の OpenSSL エラー | `OPENSSL_DIR` と `PKG_CONFIG_PATH` を確認する |
 | Skill 一覧が空 | Agent がインストール済みで、パスが存在し、`SKILL.md` があることを確認してから再スキャンする |
-| Marketplace が読み込めない | `skills.sh` へのネットワークアクセスを確認する |
+| Market が読み込めない | `skills.sh` へのネットワークアクセスを確認する。MCP 市場は `registry.modelcontextprotocol.io` へのアクセスも必要です |
 | GitHub バックアップに失敗する | token にリポジトリの読み書き権限があり、設定が正しいことを確認する |
 | Skill のインストールに失敗する | 対象 Agent ディレクトリが存在し、書き込み可能で、ディスク容量が十分か確認する |
 

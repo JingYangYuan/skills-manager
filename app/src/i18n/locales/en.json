@@ -17,7 +17,7 @@
     "mcp": "MCP"
   },
   "header": {
-    "marketplace": "Skill Marketplace",
+    "marketplace": "Marketplace",
     "dashboard": "Installed",
     "githubBackup": "GitHub Backup",
     "settings": "Settings",
@@ -25,7 +25,11 @@
     "profile": "Profile"
   },
   "marketplace": {
-    "title": "Skill Marketplace",
+    "title": "Marketplace",
+    "kind": {
+      "skill": "Skills",
+      "mcp": "MCP"
+    },
     "search": "Search skills...",
     "searchFull": "Search skill name, description, or category...",
     "filterAll": "All",
@@ -35,6 +39,111 @@
     "disable": "Disable",
     "install": "Install",
     "uninstall": "Uninstall"
+  },
+  "mcpMarket": {
+    "searchPlaceholder": "Search MCP servers by name (3+ characters)",
+    "searchHint": "The official Registry only matches names",
+    "searchTooShort": "Enter at least 3 characters",
+    "searchResultCount": "{{count}} results",
+    "sourceRegistry": "Registry",
+    "sourceRegistryHint": "From the official MCP Registry, sorted A-Z",
+    "categoryAll": "All",
+    "tabs": {
+      "featured": "Featured",
+      "all": "All",
+      "installed": "Installed"
+    },
+    "count": "{{count}} MCP servers",
+    "installedCount": "{{count}} installed",
+    "installedBadge": "Installed",
+    "loading": "Loading...",
+    "loadMore": "Load more",
+    "emptyFeatured": "No featured servers yet",
+    "emptyAll": "No matching MCP servers",
+    "emptyInstalled": "No MCP servers installed from the marketplace yet",
+    "noDescription": "No description",
+    "error": "Failed to load: {{error}}",
+    "actionFailed": "Operation failed",
+    "categories": {
+      "dev": "Development",
+      "files": "Files",
+      "search": "Search",
+      "ai": "AI",
+      "browser": "Browser",
+      "productivity": "Productivity",
+      "design": "Design",
+      "data": "Data"
+    },
+    "installKinds": {
+      "remote": "Remote",
+      "npm": "npm",
+      "pypi": "PyPI",
+      "oci": "Docker",
+      "mcpb": "MCPB",
+      "cargo": "Cargo",
+      "nuget": "NuGet",
+      "package": "Package"
+    },
+    "inputKinds": {
+      "env": "Environment",
+      "header": "Header",
+      "argument": "Argument",
+      "variable": "URL variable"
+    },
+    "detail": {
+      "version": "Version",
+      "repository": "Repository",
+      "website": "Website",
+      "installWays": "Install options",
+      "noInstallWays": "No install options available",
+      "loadingDetail": "Loading install options...",
+      "unsupportedShort": "Unsupported",
+      "unsupported": "Automatic install not supported: {{reason}}",
+      "security": "Security notice",
+      "securityDesc": "MCP servers may run local commands, read files, or access third-party services. Only install sources you trust.",
+      "publishedAt": "Published",
+      "updatedAt": "Updated",
+      "install": "Install"
+    },
+    "install": {
+      "title": "Install {{name}}",
+      "optionTitle": "Install option",
+      "localName": "Local name",
+      "localNameHint": "Server name written to the agent config",
+      "localNameRequired": "Local name is required",
+      "localNameInvalid": "Local name cannot contain slashes",
+      "inputs": "Configuration",
+      "noInputs": "This install option needs no extra configuration",
+      "required": "Required",
+      "valuesRequired": "Please fill in {{label}}",
+      "globalTargets": "Global agents",
+      "projectTargets": "Projects",
+      "noProjects": "No projects registered yet",
+      "selectAllDetected": "Select detected",
+      "clearTargets": "Clear",
+      "targetsRequired": "Select at least one global agent or project",
+      "projectTargetsRequired": "Select at least one target for project {{name}}",
+      "enabled": "Enable after install",
+      "overwrite": "Overwrite same-name MCP servers",
+      "trusted": "I confirm this MCP server comes from a trusted source and understand it may run local commands or access third-party services",
+      "trustedRequired": "Please confirm the source is trusted",
+      "install": "Install",
+      "installing": "Installing...",
+      "success": "Installed {{name}}",
+      "successWithWarnings": "Installed {{name}} with {{count}} warning(s)",
+      "warningList": "Install warnings",
+      "notDetected": "not detected",
+      "targetSummary": "Global {{global}} · Projects {{project}}"
+    },
+    "installed": {
+      "localName": "Local name",
+      "installedAt": "Installed",
+      "reinstall": "Reinstall",
+      "forget": "Remove record",
+      "forgotten": "Install record removed",
+      "globalTarget": "Global {{agent}}",
+      "projectTarget": "Project {{project}} / {{target}}"
+    }
   },
   "skillDownload": {
     "storagePath": "Storage Path",

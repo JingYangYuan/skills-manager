@@ -179,6 +179,104 @@ export interface McpOverview {
   errors: McpConfigError[];
 }
 
+// ========== MCP Marketplace ==========
+
+export type McpInstallOptionKind = 'remote' | 'package';
+
+export type McpInstallInputKind = 'env' | 'header' | 'argument' | 'variable';
+
+export interface McpInstallInput {
+  key: string;
+  label: string;
+  description?: string | null;
+  required: boolean;
+  secret: boolean;
+  defaultValue?: string | null;
+  placeholder?: string | null;
+  choices: string[];
+  kind: McpInstallInputKind;
+}
+
+export interface McpInstallOption {
+  id: string;
+  kind: McpInstallOptionKind;
+  label: string;
+  transport: string;
+  url?: string | null;
+  headers: Record<string, string>;
+  command?: string | null;
+  args: string[];
+  env: Record<string, string>;
+  inputs: McpInstallInput[];
+  supported: boolean;
+  unsupportedReason?: string | null;
+  packageType?: string | null;
+  warnings: string[];
+}
+
+export interface McpMarketplaceItem {
+  registryName: string;
+  title: string;
+  description: string;
+  version: string;
+  iconUrl?: string | null;
+  repositoryUrl?: string | null;
+  websiteUrl?: string | null;
+  categories: string[];
+  installKinds: string[];
+  installOptions: McpInstallOption[];
+  source: 'featured' | 'registry' | string;
+  updatedAt?: string | null;
+}
+
+export interface McpMarketplacePage {
+  items: McpMarketplaceItem[];
+  nextCursor?: string | null;
+}
+
+export interface McpMarketplaceDetail extends McpMarketplaceItem {
+  publishedAt?: string | null;
+  status?: string | null;
+}
+
+export interface McpProjectTarget {
+  projectId: string;
+  target: string;
+}
+
+export interface McpInstallRequest {
+  registryName: string;
+  version: string;
+  optionId: string;
+  localName: string;
+  values: Record<string, string>;
+  enabled: boolean;
+  globalTargets: string[];
+  projectTargets: McpProjectTarget[];
+  overwrite: boolean;
+}
+
+export interface McpInstallResult {
+  server: McpServerDef;
+  installedGlobal: string[];
+  installedProjects: McpProjectTarget[];
+  version: string;
+  warnings: string[];
+}
+
+/** 市场安装记录。只记录目标与版本，不包含 env / header 的值。 */
+export interface McpInstallRecord {
+  registryName: string;
+  localName: string;
+  title: string;
+  description: string;
+  version: string;
+  optionId: string;
+  installedAt: string;
+  globalTargets: string[];
+  projectTargets: McpProjectTarget[];
+}
+
 export interface GitHubRepoConfig {
   owner: string;
   repo: string;

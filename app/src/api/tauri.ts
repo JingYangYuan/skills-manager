@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { SkillMetadata, GitHubConfig, AgentConfig, AppConfig, SkillFileEntry, LinkType, ProjectConfig, ProjectSkill, ProjectCandidate, McpOverview, McpServerDef } from '@/types';
+import type { SkillMetadata, GitHubConfig, AgentConfig, AppConfig, SkillFileEntry, LinkType, ProjectConfig, ProjectSkill, ProjectCandidate, McpOverview, McpServerDef, McpMarketplaceItem, McpMarketplacePage, McpMarketplaceDetail, McpInstallRequest, McpInstallResult, McpInstallRecord } from '@/types';
 
 /** 链接校准报告（对应后端 RepairReport） */
 export interface RepairReport {
@@ -358,6 +358,43 @@ export const mcpApi = {
 
   removeProject: async (projectId: string, name: string, target: string): Promise<void> => {
     await invoke('delete_project_mcp', { projectId, name, target });
+  },
+};
+
+/** MCP 市场（官方 Registry + 内置精选） */
+export const mcpMarketplaceApi = {
+  featured: async (): Promise<McpMarketplaceItem[]> => {
+    return await invoke<McpMarketplaceItem[]>('fetch_mcp_marketplace_featured');
+  },
+
+  list: async (
+    query: string | null,
+    cursor: string | null,
+    limit = 40,
+  ): Promise<McpMarketplacePage> => {
+    return await invoke<McpMarketplacePage>('fetch_mcp_marketplace_servers', {
+      query,
+      cursor,
+      limit,
+    });
+  },
+
+  detail: async (registryName: string): Promise<McpMarketplaceDetail> => {
+    return await invoke<McpMarketplaceDetail>('fetch_mcp_marketplace_detail', {
+      registryName,
+    });
+  },
+
+  install: async (request: McpInstallRequest): Promise<McpInstallResult> => {
+    return await invoke<McpInstallResult>('install_mcp_from_marketplace', { request });
+  },
+
+  installs: async (): Promise<McpInstallRecord[]> => {
+    return await invoke<McpInstallRecord[]>('list_mcp_marketplace_installs');
+  },
+
+  forget: async (registryName: string, localName: string): Promise<void> => {
+    await invoke('forget_mcp_marketplace_install', { registryName, localName });
   },
 };
 

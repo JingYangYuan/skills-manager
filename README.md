@@ -34,7 +34,7 @@
 - **多 Agent 管理分散**：把不同 Agent 的 skills 聚合成统一视图，减少来回切目录。
 - **复用成本高**：同一个 skill 可以快速分发到多个 Agent，而不是手动复制。
 - **迁移和备份麻烦**：支持把 skills 同步到 GitHub，在新机器上一键恢复。
-- **发现优质 skills 困难**：内置 Marketplace，可直接浏览、搜索和安装社区技能。
+- **发现优质 skills 困难**：内置 Market，可直接浏览、搜索和安装社区技能与 MCP server。
 
 当前内置的 Agent 预设包括：**Claude Code、Cursor、Google Antigravity (GUI)、Antigravity CLI、Codex、GitHub Copilot、WorkBuddy、ZCode、OpenClaw、OpenCode、Kimi Code、MarsCode、OpenClaude、Hermes Agent、Grok、CodeBuddy、IMA Copilot、Kilo Code、Trae、Qoder、Kiro、Pi、OMP**（共 23 个）。
 
@@ -42,12 +42,23 @@
 
 ## 功能概览
 
-### Marketplace
+### Market（技能 + MCP）
+
+Market 顶部可在 **技能** 与 **MCP** 两种类型之间切换。
+
+技能市场：
 
 - 基于 `skills.sh` 浏览社区 skills，支持 **All Time / Trending / Hot** 三种榜单
 - 按名称、描述快速搜索
 - 预览 `SKILL.md`、详情统计和安装目标
 - 一键安装到 Root 或指定 Agent
+
+MCP 市场：
+
+- **精选**：内置 29 个常用 MCP server（GitHub、Context7、Playwright、Notion、Linear、Supabase 等），按开发 / 搜索 / 浏览器 / 效率 / 数据等分类筛选
+- **全部 / 搜索**：实时读取官方 [MCP Registry](https://registry.modelcontextprotocol.io)，支持远程（Streamable HTTP / SSE）、npm、PyPI、Docker 安装；官方搜索只匹配名称，至少需要 3 个字符
+- **安装目标**：可同时写入多个全局 Agent 与已注册项目；安装前展示必填 env / header / URL 变量 / 参数
+- **安全**：密钥字段使用密码输入框；安装记录只保存版本与目标，不保存 env / header 的值；支持同名覆盖确认与来源可信确认
 
 ![技能市场](docs/screen-shot/ScreenShot_Marketplace-1.png)
 ![技能详情](docs/screen-shot/ScreenShot_Marketplace-2.png)
@@ -78,6 +89,7 @@
 
 - 聚合 20 个 Agent 的 MCP server 配置：Claude Code、Cursor、Antigravity（GUI / CLI）、OpenClaw、OpenCode、Codex、Grok、Hermes Agent、WorkBuddy、ZCode、Pi、OMP、Kiro、Kilo Code、Kimi Code、GitHub Copilot、Trae、Qoder、CodeBuddy、MarsCode
 - 新增 / 编辑 / 删除，按 Agent 启用或停用；同名 server 定义不一致时标记冲突
+- 从 Market 的 MCP 市场安装官方 Registry 条目，支持写入全局 Agent 与项目
 - 跨 Agent 同步；写入前自动备份为 `*.skills-manager.bak`，JSON / TOML 写回保留其它字段与注释
 - 项目级 MCP：`.mcp.json`、`.cursor/mcp.json`、`.agents/mcp_config.json`（Antigravity）、`.codex/config.toml`、`.grok/config.toml`、`opencode.json`、`.kiro/settings/mcp.json`、`.kilo/kilo.json`、`.zcode/config.json`、`.github/mcp.json`、`.trae/mcp.json`、`.qoder/settings.local.json`、`.codebuddy/mcp.json`、`.kimi-code/mcp.json`、`.pi/mcp.json`、`.omp/mcp.json`
 
@@ -237,7 +249,7 @@ skills-manager/
 | 5173 端口占用 | 释放端口或修改 Vite 端口配置 |
 | macOS OpenSSL 报错 | 检查 `OPENSSL_DIR` 与 `PKG_CONFIG_PATH` |
 | 列表里没有技能 | 确认 Agent 已安装、目录存在且包含 `SKILL.md`，然后在应用中重新扫描 |
-| Marketplace 无法加载 | 检查网络连接，确认可以访问 `skills.sh` |
+| Market 无法加载 | 检查网络连接，确认可以访问 `skills.sh`；MCP 市场需要访问 `registry.modelcontextprotocol.io` |
 | GitHub 备份失败 | 确认 Token 具备仓库读写权限，仓库配置填写正确 |
 | 安装 skill 失败 | 确认目标 Agent 目录存在且可写，磁盘空间充足 |
 
