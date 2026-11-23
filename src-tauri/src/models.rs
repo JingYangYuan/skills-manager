@@ -131,6 +131,7 @@ pub fn pick_default_primary(sources: &[String]) -> Option<String> {
             "claude" => 1,
             "cursor" => 2,
             "antigravity" => 3,
+            "antigravity-cli" => 5,
             "codex" => 4,
             "workbuddy" => 6,
             "zcode" => 7,
@@ -147,6 +148,9 @@ pub fn pick_default_primary(sources: &[String]) -> Option<String> {
             "kiro" => 18,
             "pi" => 19,
             "omp" => 20,
+            "codebuddy" => 21,
+            "ima" => 22,
+            "kilo" => 23,
             _ => 100,
         }
     }
