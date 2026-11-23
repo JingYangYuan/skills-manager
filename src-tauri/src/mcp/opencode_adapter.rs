@@ -114,6 +114,36 @@ pub fn read(path: &Path) -> Result<Vec<McpServerDef>, String> {
     Ok(out)
 }
 
+/// 把统一模型渲染成 OpenCode 的 local / remote 形状（只含 MCP 字段）。
+pub fn def_to_value(def: &McpServerDef) -> Value {
+    let mut obj = Map::new();
+    match def.transport {
+        McpTransport::Stdio => {
+            obj.insert("type".to_string(), Value::String("local".to_string()));
+            let mut command = Vec::new();
+            if let Some(program) = &def.command {
+                command.push(Value::String(program.clone()));
+            }
+            command.extend(def.args.iter().cloned().map(Value::String));
+            obj.insert("command".to_string(), Value::Array(command));
+            if !def.env.is_empty() {
+                obj.insert("environment".to_string(), map_to_json(&def.env));
+            }
+        }
+        McpTransport::Sse | McpTransport::Http => {
+            obj.insert("type".to_string(), Value::String("remote".to_string()));
+            if let Some(url) = &def.url {
+                obj.insert("url".to_string(), Value::String(url.clone()));
+            }
+            if !def.headers.is_empty() {
+                obj.insert("headers".to_string(), map_to_json(&def.headers));
+            }
+        }
+    }
+    obj.insert("enabled".to_string(), Value::Bool(def.enabled));
+    Value::Object(obj)
+}
+
 fn servers_mut(root: &mut Value) -> Result<&mut Map<String, Value>, String> {
     let root_obj = root
         .as_object_mut()

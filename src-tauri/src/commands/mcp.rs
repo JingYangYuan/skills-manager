@@ -148,11 +148,7 @@ pub async fn sync_mcp_server(
 pub async fn get_mcp_raw_config(agent: String) -> Result<String, String> {
     let target = mcp::global_target(&agent)
         .ok_or_else(|| format!("不支持的 MCP agent: {}", agent))?;
-    if !target.path.exists() {
-        return Ok(String::new());
-    }
-    std::fs::read_to_string(&target.path)
-        .map_err(|e| format!("读取 {} 失败: {}", target.path.display(), e))
+    mcp::raw_section(&target)
 }
 
 // ========== 项目级 ==========
@@ -176,11 +172,7 @@ pub async fn get_project_mcp_raw_config(
     let (_project, root) = project_root(&state, &project_id)?;
     let mcp_target = mcp::project_target(&root, &target)
         .ok_or_else(|| format!("项目不支持该 MCP 目标: {}", target))?;
-    if !mcp_target.path.exists() {
-        return Ok(String::new());
-    }
-    std::fs::read_to_string(&mcp_target.path)
-        .map_err(|e| format!("读取 {} 失败: {}", mcp_target.path.display(), e))
+    mcp::raw_section(&mcp_target)
 }
 
 #[tauri::command]

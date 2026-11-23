@@ -161,6 +161,50 @@ pub fn upsert(path: &Path, def: &McpServerDef) -> Result<(), String> {
     write_doc(path, &doc)
 }
 
+/// 把统一模型渲染成只含 `[mcp_servers.*]` 的 TOML 文本（用于详情面板展示）。
+pub fn render(defs: &[McpServerDef]) -> Result<String, String> {
+    let mut doc = Document::new();
+    for def in defs {
+        let mut table = Table::new();
+        match def.transport {
+            McpTransport::Stdio => {
+                if let Some(command) = &def.command {
+                    table.insert("command", Item::Value(Value::from(command.as_str())));
+                }
+                if !def.args.is_empty() {
+                    let mut array = Array::new();
+                    for arg in &def.args {
+                        array.push(arg.as_str());
+                    }
+                    table.insert("args", Item::Value(Value::Array(array)));
+                }
+                if !def.env.is_empty() {
+                    let mut env = Table::new();
+                    for (key, value) in &def.env {
+                        env.insert(key.as_str(), Item::Value(Value::from(value.as_str())));
+                    }
+                    table.insert("env", Item::Table(env));
+                }
+            }
+            McpTransport::Sse | McpTransport::Http => {
+                if let Some(url) = &def.url {
+                    table.insert("url", Item::Value(Value::from(url.as_str())));
+                }
+            }
+        }
+        table.insert("enabled", Item::Value(Value::from(def.enabled)));
+
+        let servers = doc
+            .as_table_mut()
+            .entry("mcp_servers")
+            .or_insert(Item::Table(Table::new()))
+            .as_table_mut()
+            .ok_or_else(|| "mcp_servers 不是 TOML 表".to_string())?;
+        servers.insert(def.name.as_str(), Item::Table(table));
+    }
+    Ok(doc.to_string())
+}
+
 pub fn delete(path: &Path, name: &str) -> Result<(), String> {
     if !path.exists() {
         return Ok(());

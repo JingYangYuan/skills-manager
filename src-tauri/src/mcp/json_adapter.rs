@@ -108,6 +108,47 @@ fn parse_server(name: &str, value: &Value) -> Option<McpServerDef> {
     })
 }
 
+/// 把统一模型渲染成便于查看的 JSON 对象（只含 MCP 字段）。
+pub fn def_to_value(def: &McpServerDef) -> Value {
+    let mut obj = Map::new();
+    match def.transport {
+        McpTransport::Stdio => {
+            if let Some(command) = &def.command {
+                obj.insert("command".to_string(), Value::String(command.clone()));
+            }
+            if !def.args.is_empty() {
+                obj.insert(
+                    "args".to_string(),
+                    Value::Array(def.args.iter().cloned().map(Value::String).collect()),
+                );
+            }
+            if !def.env.is_empty() {
+                obj.insert("env".to_string(), env_to_json(&def.env));
+            }
+        }
+        McpTransport::Sse | McpTransport::Http => {
+            if let Some(url) = &def.url {
+                obj.insert("url".to_string(), Value::String(url.clone()));
+            }
+            obj.insert(
+                "type".to_string(),
+                Value::String(
+                    match def.transport {
+                        McpTransport::Sse => "sse",
+                        _ => "http",
+                    }
+                    .to_string(),
+                ),
+            );
+            if !def.headers.is_empty() {
+                obj.insert("headers".to_string(), env_to_json(&def.headers));
+            }
+        }
+    }
+    obj.insert("enabled".to_string(), Value::Bool(def.enabled));
+    Value::Object(obj)
+}
+
 fn env_to_json(env: &BTreeMap<String, String>) -> Value {
     Value::Object(
         env.iter()

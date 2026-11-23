@@ -176,6 +176,34 @@ pub fn delete_server(target: &McpTarget, name: &str) -> Result<(), String> {
     }
 }
 
+/// 只渲染某个配置中的 MCP 部分，用于详情面板预览。
+///
+/// 不返回整个文件：`~/.claude.json` 等文件还包含账号信息与项目历史。
+pub fn raw_section(target: &McpTarget) -> Result<String, String> {
+    let defs = read_servers(target)?;
+    match target.spec.format {
+        McpFormat::Json => {
+            let mut map = serde_json::Map::new();
+            for def in &defs {
+                map.insert(def.name.clone(), json_adapter::def_to_value(def));
+            }
+            let root = serde_json::json!({ "mcpServers": map });
+            serde_json::to_string_pretty(&root)
+                .map_err(|e| format!("序列化 MCP 配置失败: {}", e))
+        }
+        McpFormat::OpenCode => {
+            let mut map = serde_json::Map::new();
+            for def in &defs {
+                map.insert(def.name.clone(), opencode_adapter::def_to_value(def));
+            }
+            let root = serde_json::json!({ "mcp": { "servers": map } });
+            serde_json::to_string_pretty(&root)
+                .map_err(|e| format!("序列化 MCP 配置失败: {}", e))
+        }
+        McpFormat::Toml => toml_adapter::render(&defs),
+    }
+}
+
 pub fn set_server_enabled(target: &McpTarget, name: &str, enabled: bool) -> Result<(), String> {
     match target.spec.format {
         McpFormat::Json => json_adapter::set_enabled(&target.path, name, enabled),
