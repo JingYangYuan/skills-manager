@@ -7,6 +7,10 @@ import opencodeIcon from '@/assets/agents/opencode.svg';
 import traeIcon from '@/assets/agents/trae.svg';
 import qoderIcon from '@/assets/agents/qoder.svg';
 import antigravityIcon from '@/assets/agents/antigravity.svg';
+import antigravityCliIcon from '@/assets/agents/antigravity-cli.svg';
+import codebuddyIcon from '@/assets/agents/codebuddy.svg';
+import imaIcon from '@/assets/agents/ima.png';
+import kiloIcon from '@/assets/agents/kilo.svg';
 import kiroIcon from '@/assets/agents/kiro.svg';
 import copilotIcon from '@/assets/agents/copilot.svg';
 import workbuddyIcon from '@/assets/agents/workbuddy.svg';
@@ -60,9 +64,16 @@ const AGENT_META = {
   antigravity: {
     name: 'antigravity',
     shortName: 'Antigravity',
-    displayName: 'Google Antigravity',
-    rootPath: '~/.gemini',
+    displayName: 'Google Antigravity (GUI)',
+    rootPath: '~/.gemini/antigravity',
     icon: antigravityIcon,
+  },
+  'antigravity-cli': {
+    name: 'antigravity-cli',
+    shortName: 'Antigravity CLI',
+    displayName: 'Antigravity CLI',
+    rootPath: '~/.gemini/antigravity-cli',
+    icon: antigravityCliIcon,
   },
   codex: {
     name: 'codex',
@@ -144,6 +155,28 @@ const AGENT_META = {
     displayName: 'Grok',
     rootPath: '~/.grok',
     icon: grokIcon,
+    invertInDark: true,
+  },
+  codebuddy: {
+    name: 'codebuddy',
+    shortName: 'CodeBuddy',
+    displayName: 'CodeBuddy',
+    rootPath: '~/.codebuddy',
+    icon: codebuddyIcon,
+  },
+  ima: {
+    name: 'ima',
+    shortName: 'IMA',
+    displayName: 'IMA Copilot',
+    rootPath: '~/.config/ima',
+    icon: imaIcon,
+  },
+  kilo: {
+    name: 'kilo',
+    shortName: 'Kilo',
+    displayName: 'Kilo Code',
+    rootPath: '~/.config/kilo',
+    icon: kiloIcon,
     invertInDark: true,
   },
   trae: {

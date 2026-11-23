@@ -8,13 +8,27 @@ Built-in agent presets currently include:
 
 - Claude Code
 - Cursor
+- Google Antigravity (GUI)
+- Antigravity CLI
 - Codex
+- GitHub Copilot
+- WorkBuddy
+- ZCode
 - OpenClaw
 - OpenCode
+- Kimi Code
+- MarsCode
+- OpenClaude
+- Hermes Agent
+- Grok
+- CodeBuddy
+- IMA Copilot
+- Kilo Code
 - Trae
 - Qoder
-- Antigravity
 - Kiro
+- Pi
+- OMP
 
 The app is built with Tauri 2 + React and supports both Chinese and English, plus light and dark themes.
 
@@ -30,12 +44,14 @@ The app is built with Tauri 2 + React and supports both Chinese and English, plu
 
 ## Navigation Overview
 
-The left navigation bar currently has 4 main entries:
+The left navigation bar currently has 6 main entries:
 
 | Entry | Purpose |
 |------|---------|
 | **Marketplace** | Browse community skills and download them to Root or a specific agent |
 | **Installed** | View detected skills on your machine, filter by source, enable, import, or delete them |
+| **Projects** | Register projects and manage their skills and MCP servers |
+| **MCP** | Aggregate MCP servers across agents with add, edit, enable/disable, and cross-agent sync |
 | **GitHub Backup** | Sync your skills to GitHub or restore them from a remote repository |
 | **Settings** | Configure language, appearance, advanced behavior, agent management, and app info |
 
@@ -156,11 +172,81 @@ You can drag folders containing `SKILL.md` directly into the app window:
 
 ---
 
-## 3. GitHub Backup
+## 3. Projects (Project-Level Skills)
+
+The Projects page extends skill management into individual project folders.
+
+### 3.1 Add a Project
+
+1. Click **Add project** at the bottom of the sidebar
+2. Enter a project root (supports `~`), or click **Register** in the **Discovered** list
+3. The display name can be left empty to use the folder name
+
+Candidates come from projects recorded in `~/.claude.json` plus one-level subdirectories of `~/Documents`, `~/Desktop`, and `~/Projects`. Hidden folders under your home directory are ignored.
+
+### 3.2 Project Skill Scan
+
+Only first-level folders containing `SKILL.md` inside these conventional directories are recognized:
+
+`.claude/skills`, `.agents/skills`, `.cursor/skills`, `.codex/skills`, `.opencode/skills`, `.gemini/skills`, `.grok/skills`, `.kilocode/skills`
+
+### 3.3 Install, Import, and Delete
+
+- **Install skill**: pick a global skill and choose the target conventional folder; linking or copying follows the global link strategy
+- **Import to central**: copy a native project skill into `~/.skills-manager/skills`
+- **Delete link**: remove a managed link only; the central copy is untouched
+- **Move to trash**: move a native project folder into the Skills Manager trash, restorable from Settings → Advanced → Trash
+- **Remove project** only unregisters it; no files on disk are deleted
+
+---
+
+## 4. MCP
+
+The MCP page aggregates MCP server configs across agents and manages both global and project-level servers.
+
+### 4.1 Supported Config Locations
+
+| Agent | Config file |
+|-------|-------------|
+| Claude Code | `~/.claude.json` |
+| Cursor | `~/.cursor/mcp.json` |
+| Antigravity / Gemini | `~/.gemini/config/mcp_config.json` |
+| OpenCode | `~/.config/opencode/opencode.json` |
+| Codex | `~/.codex/config.toml` |
+| Grok | `~/.grok/config.toml` |
+
+### 4.2 Add and Edit
+
+The form supports `stdio`, `sse`, and `http` transports:
+
+- `stdio`: command, arguments (one per line), and environment variables (`KEY=VALUE`, one per line)
+- `sse` / `http`: URL and headers (`KEY=VALUE`, one per line)
+- Choose which agents to write to; identical server names with different definitions are flagged as conflicts
+
+Environment values and header values are masked in the detail panel by default.
+
+### 4.3 Enable, Sync, and Delete
+
+- Formats with a native enable flag (Codex / Grok / OpenCode / Cursor `enabled`, Antigravity `disabled`) are written directly; Claude uses a managed disabled state stored in `~/.skills-manager/mcp-state.json`
+- Antigravity remote servers use `serverUrl`; writes follow that format automatically
+- The detail panel can show raw config and copy the current definition to agents that do not have it
+- Every write backs up the original to `<file>.skills-manager.bak`; JSON / TOML edits only touch the target entry and preserve other fields and comments
+
+### 4.4 Project-Level MCP
+
+The **MCP** tab on a project detail page reads and writes:
+
+- `<project>/.mcp.json` (Claude Code)
+- `<project>/.cursor/mcp.json` (Cursor)
+- `<project>/.grok/config.toml` (Grok)
+
+---
+
+## 5. GitHub Backup
 
 The GitHub Backup page is used to sync the central skills directory to GitHub or restore it from GitHub.
 
-### 3.1 Setup Steps
+### 5.1 Setup Steps
 
 1. Create a repository on GitHub for your skills
 2. Generate a **fine-grained personal access token**
@@ -172,7 +258,7 @@ The GitHub Backup page is used to sync the central skills directory to GitHub or
    - **Token**
 5. Click **Test Connection**
 
-### 3.2 Sync to GitHub
+### 5.2 Sync to GitHub
 
 You can sync in two modes:
 
@@ -181,7 +267,7 @@ You can sync in two modes:
 
 Overwrite mode always asks for confirmation first.
 
-### 3.3 Restore from GitHub
+### 5.3 Restore from GitHub
 
 You can restore in two modes:
 
@@ -190,13 +276,13 @@ You can restore in two modes:
 
 Overwrite-local also requires confirmation.
 
-### 3.4 Other Features
+### 5.4 Other Features
 
 - A floating action button opens `~/.skills-manager`
 - A status area reflects the current repository connection state
 - The page includes a built-in step-by-step configuration guide
 
-### 3.5 Share with Others
+### 5.5 Share with Others
 
 At the bottom of the page, the sharing section generates Claude Code commands:
 
@@ -214,11 +300,11 @@ At the bottom of the page, the sharing section generates Claude Code commands:
 
 ---
 
-## 4. Settings
+## 6. Settings
 
 Settings currently has 4 tabs: **General / Advanced / Agents / About**.
 
-### 4.1 General
+### 6.1 General
 
 The General tab includes:
 
@@ -226,7 +312,7 @@ The General tab includes:
 - **Appearance**: light, dark, or follow system
 - **Search Bar Preferences**: configure which search-bar elements are shown
 
-### 4.2 Advanced
+### 6.2 Advanced
 
 The Advanced tab includes:
 
@@ -235,7 +321,7 @@ The Advanced tab includes:
 
 Use Advanced Mode carefully when working with delete-related workflows.
 
-### 4.3 Agents
+### 6.3 Agents
 
 The Agents tab shows supported agents and their detection status.
 
@@ -243,7 +329,7 @@ The Agents tab shows supported agents and their detection status.
 - Undetected agents are shown as not installed
 - The bottom area also includes an entry for the Skills Manager root folder (`~/.skills-manager`)
 
-### 4.4 About
+### 6.4 About
 
 The About tab displays:
 
@@ -253,7 +339,7 @@ The About tab displays:
 
 ---
 
-## 5. Skill File Format
+## 7. Skill File Format
 
 Every skill is a folder, and its root should contain a `SKILL.md`.
 
@@ -282,7 +368,7 @@ If you are unsure which path a specific agent currently uses, check `Settings > 
 
 ---
 
-## 6. FAQ
+## 8. FAQ
 
 ### GitHub Connection Failed
 

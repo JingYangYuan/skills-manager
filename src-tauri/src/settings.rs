@@ -151,17 +151,30 @@ impl AppSettingsManager {
                 extra_paths: vec![],
             },
             AgentConfig {
+                // GUI 版：Antigravity 桌面端（~/.gemini/antigravity）。
+                // ~/.gemini 作为 extra_path 保留，兼容历史版本放在共享根下的技能。
                 name: "antigravity".to_string(),
-                display_name: "Google Antigravity".to_string(),
-                path: "~/.gemini".to_string(),
+                display_name: "Google Antigravity (GUI)".to_string(),
+                path: "~/.gemini/antigravity".to_string(),
                 skills_path: "skills".to_string(),
                 enabled: true,
                 detected: false,
                 extra_paths: vec![
-                    "~/.antigravity".to_string(),
+                    "~/.gemini".to_string(),
+                    "~/.gemini/antigravity/builtin".to_string(),
                     "~/.gemini/config".to_string(),
-                    "~/.gemini/antigravity-cli/builtin".to_string(),
+                    "~/.antigravity".to_string(),
                 ],
+            },
+            AgentConfig {
+                // CLI 版：Antigravity CLI（~/.gemini/antigravity-cli），与 GUI 数据目录分离。
+                name: "antigravity-cli".to_string(),
+                display_name: "Antigravity CLI".to_string(),
+                path: "~/.gemini/antigravity-cli".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec!["~/.gemini/antigravity-cli/builtin".to_string()],
             },
             AgentConfig {
                 name: "codex".to_string(),
@@ -270,6 +283,33 @@ impl AppSettingsManager {
                 enabled: true,
                 detected: false,
                 extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "codebuddy".to_string(),
+                display_name: "CodeBuddy".to_string(),
+                path: "~/.codebuddy".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "ima".to_string(),
+                display_name: "IMA Copilot".to_string(),
+                path: "~/.config/ima".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec![],
+            },
+            AgentConfig {
+                name: "kilo".to_string(),
+                display_name: "Kilo Code".to_string(),
+                path: "~/.config/kilo".to_string(),
+                skills_path: "skills".to_string(),
+                enabled: true,
+                detected: false,
+                extra_paths: vec!["~/.local/share/kilo".to_string()],
             },
             AgentConfig {
                 name: "trae".to_string(),
@@ -384,6 +424,21 @@ impl AppSettingsManager {
             }
             for error in errors {
                 eprintln!("[settings] ~/.agents cleanup skipped {:?}", error);
+            }
+        }
+
+        // 一次性迁移：Antigravity 拆分为 GUI / CLI 两个预设后，CLI 的 builtin
+        // 由 `antigravity-cli` 负责扫描，从 GUI 的 extra_paths 中移除，避免重复来源。
+        if let Some(gui) = config
+            .agents
+            .iter_mut()
+            .find(|agent| agent.name == "antigravity")
+        {
+            let before = gui.extra_paths.len();
+            gui.extra_paths
+                .retain(|p| p != "~/.gemini/antigravity-cli/builtin");
+            if gui.extra_paths.len() != before {
+                config_updated = true;
             }
         }
 

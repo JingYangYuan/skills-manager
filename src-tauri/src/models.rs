@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 // ========== Phase 1 新模型 ==========
 
@@ -131,6 +131,7 @@ pub fn pick_default_primary(sources: &[String]) -> Option<String> {
             "claude" => 1,
             "cursor" => 2,
             "antigravity" => 3,
+            "antigravity-cli" => 5,
             "codex" => 4,
             "workbuddy" => 6,
             "zcode" => 7,
@@ -147,6 +148,9 @@ pub fn pick_default_primary(sources: &[String]) -> Option<String> {
             "kiro" => 18,
             "pi" => 19,
             "omp" => 20,
+            "codebuddy" => 21,
+            "ima" => 22,
+            "kilo" => 23,
             _ => 100,
         }
     }
@@ -189,6 +193,9 @@ pub struct AppConfig {
     /// 用户在 Dashboard 中"置顶"的 skill_id 列表。前端据此把这些卡片排在最前面。
     #[serde(default)]
     pub pinned_skills: Vec<String>,
+    /// 已注册的项目（项目级 skill 管理）。
+    #[serde(default)]
+    pub projects: Vec<ProjectConfig>,
 }
 
 fn default_language() -> String {
@@ -210,9 +217,147 @@ impl Default for AppConfig {
             language: default_language(),
             skill_hide_prefixes: Vec::new(),
             pinned_skills: Vec::new(),
+            projects: Vec::new(),
         }
     }
 }
+
+/// 项目级 skill 配置。
+///
+/// 项目不是 agent，不参与 `skill_states` 的合并；只保存注册信息。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectConfig {
+    /// 稳定 ID：slug(name) + "-" + path hash 前 8 位
+    pub id: String,
+    /// 展示名，默认取目录名
+    pub name: String,
+    /// 项目根目录绝对路径
+    pub path: String,
+    /// 是否参与扫描
+    pub enabled: bool,
+    /// 是否由自动发现加入
+    #[serde(default)]
+    pub auto_detected: bool,
+}
+
+/// 项目内扫描到的一个 skill（不进入全局 skill_states）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectSkill {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    /// skill 目录绝对路径
+    pub path: String,
+    /// 相对项目根的目录，如 `.claude/skills/foo`
+    pub rel_dir: String,
+    /// 所属约定目录对应的 agent 名（claude/cursor/...）
+    pub agent: String,
+    pub is_symlink: bool,
+    /// 是否是指向 Skills Manager 中央库的托管链接
+    pub is_managed: bool,
+    pub last_updated: String,
+}
+
+/// 自动发现的项目候选。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectCandidate {
+    pub path: String,
+    pub name: String,
+    /// 该项目下检测到的约定 skill 目录（相对路径）
+    pub skill_dirs: Vec<String>,
+    pub registered: bool,
+}
+
+// ========== MCP ==========
+
+/// MCP 传输方式。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum McpTransport {
+    Stdio,
+    Sse,
+    Http,
+}
+
+/// 与具体 agent 配置格式无关的 MCP server 定义。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpServerDef {
+    pub name: String,
+    pub transport: McpTransport,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+    /// 原始配置里未建模的字段，供 UI 展示 / 保真写回参考。
+    #[serde(default, skip_serializing_if = "serde_json::Value::is_null")]
+    pub extra: serde_json::Value,
+}
+
+fn default_enabled() -> bool {
+    true
+}
+
+/// 某个 MCP server 在某个 agent 配置中的绑定。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpBinding {
+    pub agent: String,
+    pub config_path: String,
+    /// 该 agent 的配置格式是否支持写回
+    pub editable: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// 该格式没有原生 enabled 字段时，由 Skills Manager 托管停用
+    pub managed_disabled: bool,
+    /// 该绑定当前是否启用（已应用托管状态）
+    pub enabled: bool,
+}
+
+/// 同名 MCP server 的聚合视图。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpServerAggregate {
+    pub name: String,
+    /// 以第一个绑定为准的定义（已应用托管停用状态）
+    pub definition: McpServerDef,
+    pub bindings: Vec<McpBinding>,
+    /// 多个 agent 中同名 server 的定义不一致
+    pub conflict: bool,
+    /// 通过托管状态停用的 agent 列表
+    pub managed_disabled: Vec<String>,
+}
+
+/// 一个可管理的 MCP 配置文件。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpAgentInfo {
+    pub agent: String,
+    pub label: String,
+    pub config_path: String,
+    pub exists: bool,
+}
+
+/// 读取某个 agent 的 MCP 配置时的错误（不影响其它 agent 的展示）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpConfigError {
+    pub agent: String,
+    pub config_path: String,
+    pub error: String,
+}
+
+/// MCP 总览：聚合结果 + 可用目标 + 读取错误。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpOverview {
+    pub servers: Vec<McpServerAggregate>,
+    pub agents: Vec<McpAgentInfo>,
+    pub errors: Vec<McpConfigError>,
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GitHubConfig {

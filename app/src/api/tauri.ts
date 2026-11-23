@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { SkillMetadata, GitHubConfig, AgentConfig, AppConfig, SkillFileEntry, LinkType } from '@/types';
+import type { SkillMetadata, GitHubConfig, AgentConfig, AppConfig, SkillFileEntry, LinkType, ProjectConfig, ProjectSkill, ProjectCandidate, McpOverview, McpServerDef } from '@/types';
 
 /** 链接校准报告（对应后端 RepairReport） */
 export interface RepairReport {
@@ -260,6 +260,104 @@ export const agentsApi = {
    */
   setSkillHidePrefixes: async (prefixes: string[]): Promise<void> => {
     await invoke('set_skill_hide_prefixes', { prefixes });
+  },
+};
+
+/** 项目级 skill 管理 */
+export const projectsApi = {
+  list: async (): Promise<ProjectConfig[]> => {
+    return await invoke<ProjectConfig[]>('list_projects');
+  },
+
+  add: async (path: string, name?: string): Promise<ProjectConfig> => {
+    return await invoke<ProjectConfig>('add_project', { path, name });
+  },
+
+  remove: async (id: string): Promise<void> => {
+    await invoke('remove_project', { id });
+  },
+
+  detectCandidates: async (): Promise<ProjectCandidate[]> => {
+    return await invoke<ProjectCandidate[]>('detect_project_candidates');
+  },
+
+  listSkills: async (projectId: string): Promise<ProjectSkill[]> => {
+    return await invoke<ProjectSkill[]>('list_project_skills', { projectId });
+  },
+
+  installSkill: async (
+    projectId: string,
+    skillId: string,
+    targetDir?: string,
+  ): Promise<string> => {
+    return await invoke<string>('install_skill_to_project', {
+      projectId,
+      skillId,
+      targetDir,
+    });
+  },
+
+  importSkill: async (projectId: string, skillPath: string): Promise<string> => {
+    return await invoke<string>('import_project_skill', { projectId, skillPath });
+  },
+
+  deleteSkill: async (
+    projectId: string,
+    skillPath: string,
+    mode: 'link' | 'trash',
+  ): Promise<void> => {
+    await invoke('delete_project_skill', { projectId, skillPath, mode });
+  },
+
+  openPath: async (projectId: string, rel?: string): Promise<void> => {
+    await invoke('open_project_path', { projectId, rel });
+  },
+};
+
+/** MCP 管理（全局 + 项目级） */
+export const mcpApi = {
+  list: async (): Promise<McpOverview> => {
+    return await invoke<McpOverview>('list_mcp_servers');
+  },
+
+  save: async (server: McpServerDef, targets: string[]): Promise<void> => {
+    await invoke('save_mcp_server', { server, targets });
+  },
+
+  remove: async (name: string, targets: string[]): Promise<void> => {
+    await invoke('delete_mcp_server', { name, targets });
+  },
+
+  setEnabled: async (name: string, enabled: boolean, targets: string[]): Promise<void> => {
+    await invoke('set_mcp_server_enabled', { name, enabled, targets });
+  },
+
+  sync: async (name: string, fromAgent: string, toAgents: string[]): Promise<void> => {
+    await invoke('sync_mcp_server', { name, fromAgent, toAgents });
+  },
+
+  rawConfig: async (agent: string): Promise<string> => {
+    return await invoke<string>('get_mcp_raw_config', { agent });
+  },
+
+  listProject: async (projectId: string): Promise<McpOverview> => {
+    return await invoke<McpOverview>('list_project_mcp', { projectId });
+  },
+
+  rawProjectConfig: async (projectId: string, target: string): Promise<string> => {
+    return await invoke<string>('get_project_mcp_raw_config', { projectId, target });
+  },
+
+  saveProject: async (
+    projectId: string,
+    server: McpServerDef,
+    target: string,
+  ): Promise<void> => {
+    await invoke('save_project_mcp', { projectId, server, target });
+  },
+
+  removeProject: async (projectId: string, name: string, target: string): Promise<void> => {
+    await invoke('delete_project_mcp', { projectId, name, target });
   },
 };
 

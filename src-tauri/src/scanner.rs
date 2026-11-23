@@ -30,16 +30,16 @@ fn path_to_display_string(path: &Path) -> String {
 
 /// 扫描过程中的一条"物理发现"记录：某个 id 在某个 source 处存在一份副本。
 #[derive(Debug, Clone)]
-struct SkillDiscovery {
-    id: String,
-    source: String, // "global" 或 agent name
-    path: String,
-    name: String,
-    description: String,
-    category: String,
-    author: Option<String>,
-    version: Option<String>,
-    last_updated: String,
+pub(crate) struct SkillDiscovery {
+    pub(crate) id: String,
+    pub(crate) source: String, // "global" 或 agent name
+    pub(crate) path: String,
+    pub(crate) name: String,
+    pub(crate) description: String,
+    pub(crate) category: String,
+    pub(crate) author: Option<String>,
+    pub(crate) version: Option<String>,
+    pub(crate) last_updated: String,
 }
 
 /// 解析 SKILL.md 的 YAML frontmatter，返回最小必要信息 + 发现条目。
@@ -48,7 +48,10 @@ struct SkillDiscovery {
 /// - frontmatter 缺失 / YAML 损坏 → 仍认为是一个合法 skill，用默认值填充
 /// - `name` 缺失 → 回退到文件夹名
 /// - `description` 缺失 → 回退到空串（前端负责显示占位）
-fn parse_discovery(skill_md_path: &Path, source: &str) -> Result<SkillDiscovery, ScannerError> {
+pub(crate) fn parse_discovery(
+    skill_md_path: &Path,
+    source: &str,
+) -> Result<SkillDiscovery, ScannerError> {
     let content = fs::read_to_string(skill_md_path)?;
 
     let skill_dir = skill_md_path.parent().unwrap();

@@ -10,9 +10,11 @@
  * - 对可能抛错的命令（GitHub API）返回合理的空态
  */
 
-import type { SkillMetadata, AppConfig, AgentConfig, GitHubConfig, SkillFileEntry, LinkType } from '@/types';
+import type { SkillMetadata, AppConfig, AgentConfig, GitHubConfig, SkillFileEntry, LinkType, ProjectConfig, ProjectSkill, ProjectCandidate, McpOverview, McpServerDef } from '@/types';
 import { PREVIEW_SKILLS, PREVIEW_SKILL_CONTENT } from '../data/skills';
 import { PREVIEW_APP_CONFIG } from '../data/agents';
+import { PREVIEW_PROJECTS, PREVIEW_PROJECT_SKILLS } from '../data/projects';
+import { PREVIEW_MCP_OVERVIEW, PREVIEW_PROJECT_MCP } from '../data/mcp';
 
 const STORAGE_KEY = 'preview:skills-v2';
 const CONFIG_KEY = 'preview:config-v2';
@@ -20,6 +22,10 @@ const CONFIG_KEY = 'preview:config-v2';
 type State = {
   skills: SkillMetadata[];
   config: AppConfig;
+  projects: ProjectConfig[];
+  projectSkills: Record<string, ProjectSkill[]>;
+  mcp: McpOverview;
+  projectMcp: McpOverview;
 };
 
 function deepClone<T>(v: T): T {
@@ -32,12 +38,24 @@ function loadState(): State {
   try {
     const skillsRaw = sessionStorage.getItem(STORAGE_KEY);
     const configRaw = sessionStorage.getItem(CONFIG_KEY);
+    const config: AppConfig = configRaw ? JSON.parse(configRaw) : deepClone(PREVIEW_APP_CONFIG);
     return {
       skills: skillsRaw ? JSON.parse(skillsRaw) : deepClone(PREVIEW_SKILLS),
-      config: configRaw ? JSON.parse(configRaw) : deepClone(PREVIEW_APP_CONFIG),
+      config,
+      projects: config.projects?.length ? config.projects : deepClone(PREVIEW_PROJECTS),
+      projectSkills: deepClone(PREVIEW_PROJECT_SKILLS),
+      mcp: deepClone(PREVIEW_MCP_OVERVIEW),
+      projectMcp: deepClone(PREVIEW_PROJECT_MCP),
     };
   } catch {
-    return { skills: deepClone(PREVIEW_SKILLS), config: deepClone(PREVIEW_APP_CONFIG) };
+    return {
+      skills: deepClone(PREVIEW_SKILLS),
+      config: deepClone(PREVIEW_APP_CONFIG),
+      projects: deepClone(PREVIEW_PROJECTS),
+      projectSkills: deepClone(PREVIEW_PROJECT_SKILLS),
+      mcp: deepClone(PREVIEW_MCP_OVERVIEW),
+      projectMcp: deepClone(PREVIEW_PROJECT_MCP),
+    };
   }
 }
 
@@ -73,6 +91,36 @@ function simulateLatency<T>(value: T, ms = 120): Promise<T> {
 }
 
 // ---------------- 命令实现 ----------------
+
+/** 预览环境的 MCP upsert：只维护内存中的绑定关系。 */
+function upsertMockMcp(overview: McpOverview, def: McpServerDef, targets: string[]) {
+  const existing = overview.servers.find((server) => server.name === def.name);
+  const bindings = targets.map((agent) => {
+    const info = overview.agents.find((item) => item.agent === agent);
+    return {
+      agent,
+      config_path: info?.config_path ?? '',
+      editable: true,
+      managed_disabled: false,
+      enabled: def.enabled,
+    };
+  });
+  if (existing) {
+    existing.definition = def;
+    existing.bindings = bindings;
+    existing.conflict = false;
+    existing.managed_disabled = [];
+  } else {
+    overview.servers.push({
+      name: def.name,
+      definition: def,
+      bindings,
+      conflict: false,
+      managed_disabled: [],
+    });
+  }
+}
+
 
 const handlers: Record<string, (args: Record<string, unknown>) => unknown | Promise<unknown>> = {
   // ---- skills ----
@@ -181,6 +229,186 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown | Prom
     // 预览环境无文件系统，统一报可读错误，业务代码里已经处理了冲突提示
     return Promise.reject(
       '在线预览暂不支持拖拽导入（浏览器无法访问本地文件系统）。请下载桌面版体验完整导入流程。',
+    );
+  },
+
+  // ---- projects ----
+  list_projects: () => simulateLatency(state.projects),
+
+  add_project: ({ path, name }) => {
+    const projectPath = String(path ?? '').trim();
+    if (!projectPath) throw new Error('项目路径不能为空');
+    if (state.projects.some((p) => p.path === projectPath)) {
+      throw new Error(`项目已注册: ${projectPath}`);
+    }
+    const folder = projectPath.split('/').filter(Boolean).pop() ?? 'project';
+    const project: ProjectConfig = {
+      id: `${folder.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now().toString(16).slice(-12)}`,
+      name: String(name ?? '').trim() || folder,
+      path: projectPath,
+      enabled: true,
+      auto_detected: false,
+    };
+    state.projects.push(project);
+    state.projectSkills[project.id] = [];
+    state.config.projects = state.projects;
+    persist();
+    return simulateLatency(project);
+  },
+
+  remove_project: ({ id }) => {
+    const projectId = String(id);
+    state.projects = state.projects.filter((p) => p.id !== projectId);
+    delete state.projectSkills[projectId];
+    state.config.projects = state.projects;
+    persist();
+    return simulateLatency(undefined);
+  },
+
+  detect_project_candidates: (): Promise<ProjectCandidate[]> =>
+    simulateLatency([
+      {
+        path: '~/Documents/new-paper',
+        name: 'new-paper',
+        skill_dirs: ['.claude/skills'],
+        registered: false,
+      },
+      {
+        path: '~/Documents/teaching-slides',
+        name: 'teaching-slides',
+        skill_dirs: [],
+        registered: false,
+      },
+    ]),
+
+  list_project_skills: ({ projectId }) =>
+    simulateLatency(state.projectSkills[String(projectId)] ?? []),
+
+  install_skill_to_project: ({ projectId, skillId, targetDir }) => {
+    const pid = String(projectId);
+    const project = state.projects.find((p) => p.id === pid);
+    if (!project) throw new Error(`项目不存在: ${pid}`);
+    const skill = findSkill(String(skillId));
+    if (!skill) throw new Error(`技能不存在: ${skillId}`);
+    const dir = String(targetDir ?? '.claude/skills');
+    const list = state.projectSkills[pid] ?? [];
+    if (list.some((s) => s.id === skill.id)) {
+      throw new Error(`项目目录中已存在技能 '${skill.name}'`);
+    }
+    const rel = `${dir}/${skill.id}`;
+    list.push({
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      path: `${project.path}/${rel}`,
+      rel_dir: rel,
+      agent: dir.split('/')[0].replace('.', ''),
+      is_symlink: true,
+      is_managed: true,
+      last_updated: '',
+    });
+    state.projectSkills[pid] = list;
+    return simulateLatency(`${project.path}/${rel}`);
+  },
+
+  import_project_skill: ({ projectId, skillPath }) => {
+    const list = state.projectSkills[String(projectId)] ?? [];
+    const found = list.find((s) => s.path === String(skillPath));
+    return simulateLatency(found?.name ?? 'project-skill');
+  },
+
+  delete_project_skill: ({ projectId, skillPath }) => {
+    const pid = String(projectId);
+    state.projectSkills[pid] = (state.projectSkills[pid] ?? []).filter(
+      (s) => s.path !== String(skillPath),
+    );
+    return simulateLatency(undefined);
+  },
+
+  open_project_path: () => simulateLatency(undefined),
+
+
+  // ---- MCP ----
+  list_mcp_servers: () => simulateLatency(state.mcp),
+
+  save_mcp_server: ({ server, targets }) => {
+    upsertMockMcp(state.mcp, server as McpServerDef, (targets as string[]) ?? []);
+    return simulateLatency(undefined);
+  },
+
+  delete_mcp_server: ({ name, targets }) => {
+    const server = state.mcp.servers.find((item) => item.name === String(name));
+    const list = (targets as string[]) ?? [];
+    if (server) {
+      server.bindings = server.bindings.filter((binding) => !list.includes(binding.agent));
+      if (server.bindings.length === 0) {
+        state.mcp.servers = state.mcp.servers.filter((item) => item.name !== server.name);
+      }
+    }
+    return simulateLatency(undefined);
+  },
+
+  set_mcp_server_enabled: ({ name, enabled, targets }) => {
+    const server = state.mcp.servers.find((item) => item.name === String(name));
+    const list = (targets as string[]) ?? [];
+    if (server) {
+      for (const binding of server.bindings) {
+        if (list.includes(binding.agent)) binding.enabled = Boolean(enabled);
+      }
+      server.definition.enabled = server.bindings.some((binding) => binding.enabled);
+    }
+    return simulateLatency(undefined);
+  },
+
+  sync_mcp_server: ({ name, toAgents }) => {
+    const server = state.mcp.servers.find((item) => item.name === String(name));
+    if (server) {
+      for (const agent of (toAgents as string[]) ?? []) {
+        if (server.bindings.some((binding) => binding.agent === agent)) continue;
+        const info = state.mcp.agents.find((item) => item.agent === agent);
+        server.bindings.push({
+          agent,
+          config_path: info?.config_path ?? '',
+          editable: true,
+          managed_disabled: false,
+          enabled: server.definition.enabled,
+        });
+      }
+    }
+    return simulateLatency(undefined);
+  },
+
+  get_mcp_raw_config: ({ agent }) => {
+    const servers = state.mcp.servers
+      .filter((server) => server.bindings.some((binding) => binding.agent === String(agent)))
+      .map((server) => server.definition);
+    return simulateLatency(
+      servers.length ? JSON.stringify({ mcpServers: Object.fromEntries(servers.map((def) => [def.name, def])) }, null, 2) : '',
+    );
+  },
+
+  list_project_mcp: () => simulateLatency(state.projectMcp),
+
+  save_project_mcp: ({ server, target }) => {
+    upsertMockMcp(state.projectMcp, server as McpServerDef, [String(target ?? 'claude')]);
+    return simulateLatency(undefined);
+  },
+
+  delete_project_mcp: ({ name, target }) => {
+    const server = state.projectMcp.servers.find((item) => item.name === String(name));
+    if (server) {
+      server.bindings = server.bindings.filter((binding) => binding.agent !== String(target));
+      if (server.bindings.length === 0) {
+        state.projectMcp.servers = state.projectMcp.servers.filter((item) => item.name !== server.name);
+      }
+    }
+    return simulateLatency(undefined);
+  },
+
+  get_project_mcp_raw_config: () => {
+    const servers = state.projectMcp.servers.map((server) => server.definition);
+    return simulateLatency(
+      servers.length ? JSON.stringify({ mcpServers: Object.fromEntries(servers.map((def) => [def.name, def])) }, null, 2) : '',
     );
   },
 

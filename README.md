@@ -36,7 +36,7 @@
 - **迁移和备份麻烦**：支持把 skills 同步到 GitHub，在新机器上一键恢复。
 - **发现优质 skills 困难**：内置 Marketplace，可直接浏览、搜索和安装社区技能。
 
-当前内置的 Agent 预设包括：**Claude Code、Cursor、Codex、OpenClaw、OpenCode、Trae、Qoder、Antigravity、Kiro**。
+当前内置的 Agent 预设包括：**Claude Code、Cursor、Google Antigravity (GUI)、Antigravity CLI、Codex、GitHub Copilot、WorkBuddy、ZCode、OpenClaw、OpenCode、Kimi Code、MarsCode、OpenClaude、Hermes Agent、Grok、CodeBuddy、IMA Copilot、Kilo Code、Trae、Qoder、Kiro、Pi、OMP**（共 23 个）。
 
 ---
 
@@ -65,6 +65,21 @@
 
 ![主页](docs/screen-shot/ScreenShot_Dashboard-1.png)
 ![技能详情](docs/screen-shot/ScreenShot_Dashboard-2.png)
+
+### 项目（项目级 Skills）
+
+- 注册任意项目根目录，自动扫描 `.claude/skills`、`.agents/skills`、`.cursor/skills`、`.codex/skills`、`.opencode/skills`、`.gemini/skills`、`.grok/skills`、`.kilocode/skills`
+- 从 `~/.claude.json` 与常见项目目录自动发现候选项目
+- 把中央库 skill 安装到项目（按全局链接策略创建链接或复制）
+- 把项目原生 skill 导入中央库；删除托管链接，或把原生目录移入回收站（可恢复）
+- 「移除项目」只取消注册，不会删除磁盘文件
+
+### MCP 管理
+
+- 聚合 Claude Code、Cursor、Antigravity / Gemini、OpenCode、Codex、Grok 的 MCP server 配置
+- 新增 / 编辑 / 删除，按 Agent 启用或停用；同名 server 定义不一致时标记冲突
+- 跨 Agent 同步；写入前自动备份为 `*.skills-manager.bak`，JSON / TOML 写回保留其它字段与注释
+- 项目级 MCP：`<project>/.mcp.json`、`<project>/.cursor/mcp.json`、`<project>/.grok/config.toml`
 
 ### GitHub 备份与分发
 

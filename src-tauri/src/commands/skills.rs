@@ -36,7 +36,7 @@ fn extract_skill_name_from_md(content: &str) -> Option<String> {
 /// 扫描并把结果同步回 skill_states（自愈），**不落盘**。
 /// 用于需要后续再改 skill_states 的场景（enable/disable/delete/set_primary），
 /// 由调用方在末尾统一 save 一次，避免两次 IO。
-fn scan_only(
+pub(crate) fn scan_only(
     settings: &mut crate::settings::AppSettingsManager,
 ) -> Result<Vec<SkillMetadata>, String> {
     let agents = settings.get_config().agents.clone();
@@ -65,7 +65,7 @@ fn scan_and_persist(
 }
 
 /// 让技能列表缓存失效（任何会改变磁盘链接或 skill_states 的写入后调用）。
-fn invalidate_skills_cache(state: &AppState) {
+pub(crate) fn invalidate_skills_cache(state: &AppState) {
     if let Ok(mut cache) = state.skills_cache.lock() {
         *cache = None;
     }

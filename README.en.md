@@ -36,7 +36,7 @@ It is designed for a few practical workflows:
 - **Back up and migrate cleanly**: sync your skills repository to GitHub and restore it on a new machine.
 - **Discover useful skills**: browse, search, and install community skills from the built-in Marketplace.
 
-Built-in agent presets currently include **Claude Code, Cursor, Codex, OpenClaw, OpenCode, Trae, Qoder, Antigravity, and Kiro**.
+Built-in agent presets currently include **Claude Code, Cursor, Google Antigravity (GUI), Antigravity CLI, Codex, GitHub Copilot, WorkBuddy, ZCode, OpenClaw, OpenCode, Kimi Code, MarsCode, OpenClaude, Hermes Agent, Grok, CodeBuddy, IMA Copilot, Kilo Code, Trae, Qoder, Kiro, Pi, and OMP** (23 in total).
 
 ---
 
@@ -62,6 +62,21 @@ Built-in agent presets currently include **Claude Code, Cursor, Codex, OpenClaw,
 
 ![Home](docs/screen-shot/ScreenShot_Dashboard-1.png)
 ![Skill Details](docs/screen-shot/ScreenShot_Dashboard-2.png)
+
+### Projects (Project-Level Skills)
+
+- Register any project root and scan conventional folders such as `.claude/skills`, `.agents/skills`, `.cursor/skills`, `.codex/skills`, `.opencode/skills`, `.gemini/skills`, `.grok/skills`, and `.kilocode/skills`
+- Discover candidate projects from `~/.claude.json` and common project directories
+- Install central-library skills into a project (linked or copied according to the global strategy)
+- Import native project skills into the central library; delete managed links or move native folders to the trash (restorable)
+- "Remove project" only unregisters it; no files on disk are deleted
+
+### MCP Management
+
+- Aggregate MCP servers from Claude Code, Cursor, Antigravity / Gemini, OpenCode, Codex, and Grok
+- Add / edit / delete and enable or disable per agent; conflicting definitions are flagged
+- Sync across agents; every write is backed up to `*.skills-manager.bak`, and JSON / TOML edits preserve other fields and comments
+- Project-level MCP: `<project>/.mcp.json`, `<project>/.cursor/mcp.json`, `<project>/.grok/config.toml`
 
 ### GitHub Backup and Distribution
 

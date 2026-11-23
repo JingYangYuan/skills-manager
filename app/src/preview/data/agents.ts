@@ -1,5 +1,6 @@
 import type { AgentConfig, AppConfig } from '@/types';
 import { LINK_TYPE } from '@/types';
+import { PREVIEW_PROJECTS } from './projects';
 
 /**
  * Preview 模式预设 agent 列表。
@@ -26,8 +27,16 @@ export const PREVIEW_AGENTS: AgentConfig[] = [
   },
   {
     name: 'antigravity',
-    display_name: 'Google Antigravity',
-    path: '~/.gemini',
+    display_name: 'Google Antigravity (GUI)',
+    path: '~/.gemini/antigravity',
+    skills_path: 'skills',
+    enabled: true,
+    detected: true,
+  },
+  {
+    name: 'antigravity-cli',
+    display_name: 'Antigravity CLI',
+    path: '~/.gemini/antigravity-cli',
     skills_path: 'skills',
     enabled: true,
     detected: true,
@@ -80,6 +89,38 @@ export const PREVIEW_AGENTS: AgentConfig[] = [
     enabled: true,
     detected: true,
   },
+  {
+    name: 'grok',
+    display_name: 'Grok',
+    path: '~/.grok',
+    skills_path: 'skills',
+    enabled: true,
+    detected: true,
+  },
+  {
+    name: 'codebuddy',
+    display_name: 'CodeBuddy',
+    path: '~/.codebuddy',
+    skills_path: 'skills',
+    enabled: true,
+    detected: true,
+  },
+  {
+    name: 'ima',
+    display_name: 'IMA Copilot',
+    path: '~/.config/ima',
+    skills_path: 'skills',
+    enabled: true,
+    detected: true,
+  },
+  {
+    name: 'kilo',
+    display_name: 'Kilo Code',
+    path: '~/.config/kilo',
+    skills_path: 'skills',
+    enabled: true,
+    detected: true,
+  },
 ];
 
 export const PREVIEW_APP_CONFIG: AppConfig = {
@@ -87,4 +128,5 @@ export const PREVIEW_APP_CONFIG: AppConfig = {
   agents: PREVIEW_AGENTS,
   skill_hide_prefixes: [],
   pinned_skills: ['pinned-demo'],
+  projects: PREVIEW_PROJECTS,
 };
