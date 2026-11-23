@@ -4,11 +4,11 @@
     "version": "v1.0.0"
   },
   "nav": {
-    "marketplace": "技能市場",
+    "marketplace": "市場",
     "installed": "已安裝",
     "backup": "備份",
     "dashboard": "已安裝",
-    "skillDownload": "技能市場",
+    "skillDownload": "市場",
     "githubBackup": "備份",
     "settings": "設定",
     "expand": "展開",
@@ -17,7 +17,7 @@
     "mcp": "MCP"
   },
   "header": {
-    "marketplace": "技能市場",
+    "marketplace": "市場",
     "dashboard": "已安裝",
     "githubBackup": "GitHub備份",
     "settings": "設定",
@@ -25,7 +25,11 @@
     "profile": "個人資料"
   },
   "marketplace": {
-    "title": "技能市場",
+    "title": "市場",
+    "kind": {
+      "skill": "技能",
+      "mcp": "MCP"
+    },
     "search": "搜尋技能...",
     "searchFull": "搜尋技能名稱、描述或分類...",
     "filterAll": "全部",
@@ -35,6 +39,111 @@
     "disable": "停用",
     "install": "安裝",
     "uninstall": "解除安裝"
+  },
+  "mcpMarket": {
+    "searchPlaceholder": "搜尋 MCP server 名稱（至少 3 個字元）",
+    "searchHint": "官方 Registry 搜尋只比對名稱",
+    "searchTooShort": "搜尋詞至少需要 3 個字元",
+    "searchResultCount": "{{count}} 個搜尋結果",
+    "sourceRegistry": "Registry",
+    "sourceRegistryHint": "來自官方 MCP Registry，依名稱 A-Z 排序",
+    "categoryAll": "全部",
+    "tabs": {
+      "featured": "精選",
+      "all": "全部",
+      "installed": "已安裝"
+    },
+    "count": "{{count}} 個 MCP server",
+    "installedCount": "{{count}} 個已安裝",
+    "installedBadge": "已安裝",
+    "loading": "載入中...",
+    "loadMore": "載入更多",
+    "emptyFeatured": "精選列表暫時為空",
+    "emptyAll": "沒有符合的 MCP server",
+    "emptyInstalled": "還沒有從市場安裝的 MCP server",
+    "noDescription": "暫無描述",
+    "error": "載入失敗: {{error}}",
+    "actionFailed": "操作失敗",
+    "categories": {
+      "dev": "開發",
+      "files": "檔案",
+      "search": "搜尋",
+      "ai": "AI",
+      "browser": "瀏覽器",
+      "productivity": "效率",
+      "design": "設計",
+      "data": "資料"
+    },
+    "installKinds": {
+      "remote": "遠端",
+      "npm": "npm",
+      "pypi": "PyPI",
+      "oci": "Docker",
+      "mcpb": "MCPB",
+      "cargo": "Cargo",
+      "nuget": "NuGet",
+      "package": "套件"
+    },
+    "inputKinds": {
+      "env": "環境變數",
+      "header": "請求標頭",
+      "argument": "參數",
+      "variable": "URL 變數"
+    },
+    "detail": {
+      "version": "版本",
+      "repository": "倉庫",
+      "website": "官網",
+      "installWays": "安裝方式",
+      "noInstallWays": "暫無可用安裝方式",
+      "loadingDetail": "正在取得安裝方式...",
+      "unsupportedShort": "暫不支援",
+      "unsupported": "暫不支援自動安裝：{{reason}}",
+      "security": "安全提示",
+      "securityDesc": "MCP server 可能執行本機命令、讀取檔案或存取第三方服務。請只安裝你信任的來源。",
+      "publishedAt": "發佈時間",
+      "updatedAt": "更新時間",
+      "install": "安裝"
+    },
+    "install": {
+      "title": "安裝 {{name}}",
+      "optionTitle": "安裝方式",
+      "localName": "本地名稱",
+      "localNameHint": "寫入設定檔時使用的 server 名稱",
+      "localNameRequired": "請填寫本地名稱",
+      "localNameInvalid": "本地名稱不能包含斜線",
+      "inputs": "設定項目",
+      "noInputs": "此安裝方式不需要額外設定",
+      "required": "必填",
+      "valuesRequired": "請填寫 {{label}}",
+      "globalTargets": "全域 Agent",
+      "projectTargets": "專案",
+      "noProjects": "還沒有註冊專案",
+      "selectAllDetected": "全選已偵測",
+      "clearTargets": "清空",
+      "targetsRequired": "請至少選擇一個全域 Agent 或專案",
+      "projectTargetsRequired": "請為專案 {{name}} 選擇至少一個目標",
+      "enabled": "安裝後啟用",
+      "overwrite": "覆蓋同名 MCP server",
+      "trusted": "我已確認該 MCP server 來源可信，並了解它可能執行本機命令或存取第三方服務",
+      "trustedRequired": "請先確認來源可信",
+      "install": "安裝",
+      "installing": "安裝中...",
+      "success": "已安裝 {{name}}",
+      "successWithWarnings": "已安裝 {{name}}，但有 {{count}} 條提示",
+      "warningList": "安裝提示",
+      "notDetected": "未偵測到",
+      "targetSummary": "全域 {{global}} · 專案 {{project}}"
+    },
+    "installed": {
+      "localName": "本地名稱",
+      "installedAt": "安裝時間",
+      "reinstall": "重新安裝",
+      "forget": "移除記錄",
+      "forgotten": "已移除安裝記錄",
+      "globalTarget": "全域 {{agent}}",
+      "projectTarget": "專案 {{project}} / {{target}}"
+    }
   },
   "skillDownload": {
     "storagePath": "存放路徑",

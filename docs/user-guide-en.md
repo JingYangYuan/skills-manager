@@ -48,26 +48,26 @@ The left navigation bar currently has 6 main entries:
 
 | Entry | Purpose |
 |------|---------|
-| **Marketplace** | Browse community skills and download them to Root or a specific agent |
+| **Market** | Browse community skills and the official MCP Registry, then install them to Root, a specific agent, or a project |
 | **Installed** | View detected skills on your machine, filter by source, enable, import, or delete them |
 | **Projects** | Register projects and manage their skills and MCP servers |
 | **MCP** | Aggregate MCP servers across agents with add, edit, enable/disable, and cross-agent sync |
 | **GitHub Backup** | Sync your skills to GitHub or restore them from a remote repository |
 | **Settings** | Configure language, appearance, advanced behavior, agent management, and app info |
 
-The default landing page is **Marketplace**.
+The default landing page is **Market**.
 
 Useful shortcuts:
 
-- `Ctrl/Cmd + A`: open Marketplace
+- `Ctrl/Cmd + A`: open Market
 - `Ctrl/Cmd + S`: open Installed
 - `Ctrl/Cmd + D`: open GitHub Backup
 
 ---
 
-## 1. Marketplace
+## 1. Market (Skills + MCP)
 
-Marketplace is used to browse and install community skills from `skills.sh`.
+The Market page is used to browse and install community skills from `skills.sh` and MCP servers from the official MCP Registry. Use the switch at the top to choose **Skills** or **MCP**.
 
 ### 1.1 Rankings and Search
 
@@ -93,6 +93,25 @@ In the top-right area, you can choose where downloads go:
 - Click a skill card to open its details
 - The detail area shows description, preview content, and source information
 - Click download to install the skill into the currently selected target
+
+### 1.4 MCP Market
+
+The MCP tab has three sections:
+
+- **Featured**: 29 curated MCP servers with category filters such as development, search, browser, productivity, design, and data
+- **All**: live results from the official MCP Registry, sorted A-Z with pagination
+- **Installed**: servers installed from the market; you can reinstall or remove the record (removing a record does not modify any agent config)
+
+Search and install:
+
+- The official Registry search matches server names only and requires at least 3 characters
+- Open a card to inspect install options (remote Streamable HTTP / SSE, npm, PyPI, Docker), repository, and security notice
+- After clicking **Install**, choose an install option and fill in required env / header / URL variables / arguments; secret fields use password inputs
+- Select multiple global agents and one or more registered projects with their project-level targets
+- Same-name servers are not overwritten unless **Overwrite same-name MCP servers** is checked
+- Confirm the trusted-source checkbox before the install writes any config
+
+Install records live in `~/.skills-manager/mcp-installs.json` and contain only registry name, local name, version, and targets — never env / header values. MCP servers may run local commands or access third-party services; only install sources you trust.
 
 ---
 
@@ -426,8 +445,15 @@ Common reasons:
 - the skill only exists in a native agent directory, so there is no deletable Root copy
 - the current delete dialog still protects native agent-source rows
 
-### Marketplace Download Fails
+### Market Skill Download Fails
 
 - make sure your network can access `skills.sh`
 - make sure the target install location is writable
 - if installing to a specific agent, confirm that the agent has been detected correctly
+
+### MCP Market Fails to Load or Install
+
+- make sure your network can access `registry.modelcontextprotocol.io`
+- search requires at least 3 characters, and the official Registry matches names only
+- for npm / PyPI / Docker servers, confirm that `npx` / `uvx` / `docker` is installed locally
+- if a same-name server already exists, check **Overwrite same-name MCP servers** and retry

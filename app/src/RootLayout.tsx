@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SideNavBar from './components/SideNavBar';
 import Dashboard from './pages/Dashboard';
-import SkillDownload from './pages/Marketplace/SkillDownload';
+import Marketplace from './pages/Marketplace';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { isTauri } from '@/lib/tauri-env';
 import { PAGE, pageToPath, pathToPage, type Page } from '@/constants';
@@ -28,7 +28,7 @@ function RootLayoutContent() {
 
   const currentPage: Page = pathToPage(location.pathname);
   const isDashboard = currentPage === PAGE.Dashboard;
-  const isSkillDownload = currentPage === PAGE.SkillDownload;
+  const isMarketplace = currentPage === PAGE.SkillDownload;
 
   useEffect(() => {
     if (isTauri()) {
@@ -68,7 +68,7 @@ function RootLayoutContent() {
       <SideNavBar />
       <main className="flex-1 h-screen overflow-hidden">
         {/* Dashboard 是最重的页面（扫描所有 SKILL.md），始终挂载避免每次切页都重新扫描。
-            SkillDownload 同样始终挂载，保留下载进度状态。
+            市场页同样始终挂载，保留技能下载进度与 MCP 市场搜索状态。
             其他页面走 Outlet，按 Route 配置渲染。 */}
         <div
           className="h-full"
@@ -84,13 +84,13 @@ function RootLayoutContent() {
         <div
           className="h-full"
           style={{
-            display: isSkillDownload ? 'block' : 'none',
-            contentVisibility: isSkillDownload ? 'auto' : 'hidden'  // 跳过隐藏页面的渲染
+            display: isMarketplace ? 'block' : 'none',
+            contentVisibility: isMarketplace ? 'auto' : 'hidden'  // 跳过隐藏页面的渲染
           }}
         >
-          <SkillDownload />
+          <Marketplace />
         </div>
-        {!isDashboard && !isSkillDownload && <Outlet />}
+        {!isDashboard && !isMarketplace && <Outlet />}
       </main>
     </div>
   );

@@ -10,11 +10,12 @@
  * - 对可能抛错的命令（GitHub API）返回合理的空态
  */
 
-import type { SkillMetadata, AppConfig, AgentConfig, GitHubConfig, SkillFileEntry, LinkType, ProjectConfig, ProjectSkill, ProjectCandidate, McpOverview, McpServerDef } from '@/types';
+import type { SkillMetadata, AppConfig, AgentConfig, GitHubConfig, SkillFileEntry, LinkType, ProjectConfig, ProjectSkill, ProjectCandidate, McpOverview, McpServerDef, McpInstallRecord } from '@/types';
 import { PREVIEW_SKILLS, PREVIEW_SKILL_CONTENT } from '../data/skills';
 import { PREVIEW_APP_CONFIG } from '../data/agents';
 import { PREVIEW_PROJECTS, PREVIEW_PROJECT_SKILLS } from '../data/projects';
 import { PREVIEW_MCP_OVERVIEW, PREVIEW_PROJECT_MCP } from '../data/mcp';
+import { PREVIEW_MCP_MARKET_DETAILS } from '../data/mcpMarket';
 
 const STORAGE_KEY = 'preview:skills-v2';
 const CONFIG_KEY = 'preview:config-v2';
@@ -26,6 +27,7 @@ type State = {
   projectSkills: Record<string, ProjectSkill[]>;
   mcp: McpOverview;
   projectMcp: McpOverview;
+  mcpInstalls: McpInstallRecord[];
 };
 
 function deepClone<T>(v: T): T {
@@ -46,6 +48,7 @@ function loadState(): State {
       projectSkills: deepClone(PREVIEW_PROJECT_SKILLS),
       mcp: deepClone(PREVIEW_MCP_OVERVIEW),
       projectMcp: deepClone(PREVIEW_PROJECT_MCP),
+      mcpInstalls: [],
     };
   } catch {
     return {
@@ -55,6 +58,7 @@ function loadState(): State {
       projectSkills: deepClone(PREVIEW_PROJECT_SKILLS),
       mcp: deepClone(PREVIEW_MCP_OVERVIEW),
       projectMcp: deepClone(PREVIEW_PROJECT_MCP),
+      mcpInstalls: [],
     };
   }
 }
@@ -121,6 +125,8 @@ function upsertMockMcp(overview: McpOverview, def: McpServerDef, targets: string
   }
 }
 
+
+const PREVIEW_MCP_MARKET_ITEMS = Object.values(PREVIEW_MCP_MARKET_DETAILS);
 
 const handlers: Record<string, (args: Record<string, unknown>) => unknown | Promise<unknown>> = {
   // ---- skills ----
@@ -410,6 +416,137 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown | Prom
     return simulateLatency(
       servers.length ? JSON.stringify({ mcpServers: Object.fromEntries(servers.map((def) => [def.name, def])) }, null, 2) : '',
     );
+  },
+
+  // ---- MCP marketplace ----
+  fetch_mcp_marketplace_featured: () => simulateLatency(PREVIEW_MCP_MARKET_ITEMS),
+
+  fetch_mcp_marketplace_servers: ({ query, cursor, limit }) => {
+    const term = String(query ?? '').trim().toLowerCase();
+    const matched = term
+      ? PREVIEW_MCP_MARKET_ITEMS.filter((item) =>
+          `${item.title} ${item.registryName} ${item.description}`.toLowerCase().includes(term),
+        )
+      : PREVIEW_MCP_MARKET_ITEMS;
+    const start = cursor ? Number(cursor) || 0 : 0;
+    const size = Number(limit) > 0 ? Number(limit) : 40;
+    return simulateLatency({
+      items: matched.slice(start, start + size),
+      nextCursor: start + size < matched.length ? String(start + size) : null,
+    });
+  },
+
+  fetch_mcp_marketplace_detail: ({ registryName }) => {
+    const detail = PREVIEW_MCP_MARKET_DETAILS[String(registryName)];
+    if (!detail) throw new Error(`预览环境未内置 MCP server: ${String(registryName)}`);
+    return simulateLatency(detail);
+  },
+
+  list_mcp_marketplace_installs: () => simulateLatency(state.mcpInstalls),
+
+  forget_mcp_marketplace_install: ({ registryName, localName }) => {
+    state.mcpInstalls = state.mcpInstalls.filter(
+      (record) =>
+        record.registryName !== String(registryName) || record.localName !== String(localName),
+    );
+    return simulateLatency(undefined);
+  },
+
+  install_mcp_from_marketplace: ({ request }) => {
+    const req = request as {
+      registryName: string;
+      optionId: string;
+      localName: string;
+      values?: Record<string, string>;
+      enabled?: boolean;
+      globalTargets?: string[];
+      projectTargets?: Array<{ projectId: string; target: string }>;
+    };
+    const detail = PREVIEW_MCP_MARKET_DETAILS[req.registryName];
+    if (!detail) throw new Error(`预览环境未内置 MCP server: ${req.registryName}`);
+    const option =
+      detail.installOptions.find((item) => item.id === req.optionId) ?? detail.installOptions[0];
+    if (!option || !option.supported) throw new Error('该安装方式暂不支持');
+
+    const values = req.values ?? {};
+    const env: Record<string, string> = {};
+    const headers: Record<string, string> = {};
+    for (const input of option.inputs) {
+      const value = (values[input.key] ?? input.defaultValue ?? '').trim();
+      if (!value) continue;
+      if (input.kind === 'header') headers[input.label] = value;
+      else if (input.kind === 'env') env[input.label] = value;
+    }
+
+    const enabled = req.enabled ?? true;
+    const server: McpServerDef =
+      option.kind === 'remote'
+        ? {
+            name: req.localName,
+            transport: option.transport as McpServerDef['transport'],
+            args: [],
+            env: {},
+            url: option.url ?? '',
+            headers,
+            enabled,
+          }
+        : {
+            name: req.localName,
+            transport: 'stdio',
+            command: option.command ?? 'npx',
+            args: [...option.args],
+            env,
+            headers: {},
+            enabled,
+          };
+
+    const globalTargets = req.globalTargets ?? [];
+    const projectTargets = req.projectTargets ?? [];
+    if (globalTargets.length > 0) upsertMockMcp(state.mcp, server, globalTargets);
+    for (const entry of projectTargets) upsertMockMcp(state.projectMcp, server, [entry.target]);
+
+    const record: McpInstallRecord = {
+      registryName: detail.registryName,
+      localName: server.name,
+      title: detail.title,
+      description: detail.description,
+      version: detail.version,
+      optionId: option.id,
+      installedAt: new Date().toISOString(),
+      globalTargets,
+      projectTargets,
+    };
+    const existing = state.mcpInstalls.find(
+      (item) =>
+        item.registryName === record.registryName && item.localName === record.localName,
+    );
+    if (existing) {
+      existing.version = record.version;
+      existing.optionId = record.optionId;
+      existing.installedAt = record.installedAt;
+      for (const target of globalTargets) {
+        if (!existing.globalTargets.includes(target)) existing.globalTargets.push(target);
+      }
+      for (const entry of projectTargets) {
+        if (
+          !existing.projectTargets.some(
+            (item) => item.projectId === entry.projectId && item.target === entry.target,
+          )
+        ) {
+          existing.projectTargets.push(entry);
+        }
+      }
+    } else {
+      state.mcpInstalls.push(record);
+    }
+
+    return simulateLatency({
+      server,
+      installedGlobal: globalTargets,
+      installedProjects: projectTargets,
+      version: detail.version,
+      warnings: [],
+    });
   },
 
   // ---- agents / config ----

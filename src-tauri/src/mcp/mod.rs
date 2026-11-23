@@ -12,6 +12,7 @@
 
 pub mod json_adapter;
 pub mod opencode_adapter;
+pub mod registry;
 pub mod state;
 pub mod toml_adapter;
 pub mod yaml_adapter;
@@ -444,6 +445,15 @@ pub fn supports_enabled_flag(spec: &McpAgentSpec) -> bool {
         McpFormat::Toml | McpFormat::OpenCode | McpFormat::Kilo | McpFormat::Yaml => true,
         McpFormat::Json(json) => json.enabled != EnabledStyle::None,
     }
+}
+
+/// 该 agent 的配置格式是否能保存远程 server 的 headers。
+///
+/// Codex / Grok 的 TOML 适配器目前只写 `url`，没有 headers 字段；
+/// 市场安装遇到需要 Authorization 等请求头的远程 server 时，
+/// 必须提前拒绝这些目标，避免“安装成功但 header 丢失”。
+pub fn supports_remote_headers(spec: &McpAgentSpec) -> bool {
+    !matches!(spec.format, McpFormat::Toml)
 }
 
 pub fn read_servers(target: &McpTarget) -> Result<Vec<McpServerDef>, String> {

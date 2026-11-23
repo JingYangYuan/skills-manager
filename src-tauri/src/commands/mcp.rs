@@ -5,10 +5,10 @@ use crate::models::{McpOverview, McpServerDef, McpTransport, ProjectConfig};
 use crate::projects;
 use crate::state::AppState;
 use log::info;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::State;
 
-fn validate_server(server: &McpServerDef) -> Result<(), String> {
+pub(crate) fn validate_server(server: &McpServerDef) -> Result<(), String> {
     match server.transport {
         McpTransport::Stdio => {
             if server.command.as_deref().unwrap_or("").trim().is_empty() {
@@ -24,7 +24,10 @@ fn validate_server(server: &McpServerDef) -> Result<(), String> {
     Ok(())
 }
 
-fn project_root(state: &AppState, project_id: &str) -> Result<(ProjectConfig, PathBuf), String> {
+pub(crate) fn project_root(
+    state: &AppState,
+    project_id: &str,
+) -> Result<(ProjectConfig, PathBuf), String> {
     let settings = state
         .settings_manager
         .lock()
@@ -38,6 +41,53 @@ fn project_root(state: &AppState, project_id: &str) -> Result<(ProjectConfig, Pa
         .ok_or_else(|| format!("项目不存在: {}", project_id))?;
     let root = projects::normalize_project_path(&project.path);
     Ok((project, root))
+}
+
+/// 把 server 写入一个全局 Agent，并同步“托管停用”状态。
+///
+/// 配置写入成功后，即使状态同步失败也只返回 warning：
+/// 磁盘事实已经改变，不能再向调用方报告“安装失败”。
+pub(crate) fn apply_server_to_global_target(
+    server: &McpServerDef,
+    agent: &str,
+) -> Result<Vec<String>, String> {
+    let target = mcp::global_target(agent)
+        .ok_or_else(|| format!("不支持的 MCP agent: {}", agent))?;
+    mcp::upsert_server(&target, server)?;
+    let state_key = mcp::state_key("", agent);
+    let mut warnings = Vec::new();
+    let disabled = if mcp::supports_enabled_flag(&target.spec) {
+        false
+    } else {
+        !server.enabled
+    };
+    if let Err(error) = mcp::state::set_disabled(&state_key, &server.name, disabled) {
+        warnings.push(format!("配置已写入，但启用状态同步失败: {}", error));
+    }
+    Ok(warnings)
+}
+
+/// 把 server 写入一个项目级目标，并同步“托管停用”状态。
+pub(crate) fn apply_server_to_project_target(
+    project_id: &str,
+    root: &Path,
+    server: &McpServerDef,
+    target: &str,
+) -> Result<Vec<String>, String> {
+    let mcp_target = mcp::project_target(root, target)
+        .ok_or_else(|| format!("项目不支持该 MCP 目标: {}", target))?;
+    mcp::upsert_server(&mcp_target, server)?;
+    let state_key = mcp::state_key(&format!("project:{}", project_id), target);
+    let mut warnings = Vec::new();
+    let disabled = if mcp::supports_enabled_flag(&mcp_target.spec) {
+        false
+    } else {
+        !server.enabled
+    };
+    if let Err(error) = mcp::state::set_disabled(&state_key, &server.name, disabled) {
+        warnings.push(format!("配置已写入，但启用状态同步失败: {}", error));
+    }
+    Ok(warnings)
 }
 
 // ========== 全局 ==========
@@ -61,14 +111,8 @@ pub async fn save_mcp_server(server: McpServerDef, targets: Vec<String>) -> Resu
     validate_server(&server)?;
 
     for agent in &targets {
-        let target = mcp::global_target(agent)
-            .ok_or_else(|| format!("不支持的 MCP agent: {}", agent))?;
-        mcp::upsert_server(&target, &server)?;
-        let state_key = mcp::state_key("", agent);
-        if mcp::supports_enabled_flag(&target.spec) {
-            mcp::state::set_disabled(&state_key, &server.name, false)?;
-        } else {
-            mcp::state::set_disabled(&state_key, &server.name, !server.enabled)?;
+        for warning in apply_server_to_global_target(&server, agent)? {
+            log::warn!("MCP server '{}' target '{}': {}", server.name, agent, warning);
         }
     }
     info!("MCP server '{}' saved to {:?}", server.name, targets);
@@ -183,21 +227,20 @@ pub async fn save_project_mcp(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let (_project, root) = project_root(&state, &project_id)?;
-    let mcp_target = mcp::project_target(&root, &target)
-        .ok_or_else(|| format!("项目不支持该 MCP 目标: {}", target))?;
     let mut server = server;
     server.name = server.name.trim().to_string();
     if server.name.is_empty() {
         return Err("MCP server 名称不能为空".to_string());
     }
     validate_server(&server)?;
-    mcp::upsert_server(&mcp_target, &server)?;
-
-    let state_key = mcp::state_key(&format!("project:{}", project_id), &target);
-    if mcp::supports_enabled_flag(&mcp_target.spec) {
-        mcp::state::set_disabled(&state_key, &server.name, false)?;
-    } else {
-        mcp::state::set_disabled(&state_key, &server.name, !server.enabled)?;
+    for warning in apply_server_to_project_target(&project_id, &root, &server, &target)? {
+        log::warn!(
+            "Project '{}' MCP server '{}' target '{}': {}",
+            project_id,
+            server.name,
+            target,
+            warning
+        );
     }
     info!(
         "Project '{}' MCP server '{}' saved to {}",
