@@ -12,7 +12,8 @@
     "githubBackup": "備份",
     "settings": "設定",
     "expand": "展開",
-    "collapse": "收合"
+    "collapse": "收合",
+    "projects": "專案"
   },
   "header": {
     "marketplace": "技能市場",
@@ -636,7 +637,8 @@
     "disabled": "未啟用",
     "required": "必填",
     "notInstalled": "未安裝",
-    "detected": "已檢測"
+    "detected": "已檢測",
+    "refresh": "重新整理"
   },
   "installDialog": {
     "title": "安裝技能: {{name}}",
@@ -652,5 +654,52 @@
     "details": "詳情",
     "installed": "已安裝",
     "install": "安裝"
+  },
+  "projects": {
+    "listTitle": "專案列表",
+    "title": "專案",
+    "add": "新增專案",
+    "addTitle": "新增專案",
+    "addDesc": "選擇專案根目錄，Skills Manager 會掃描專案內 .claude/skills 等約定目錄。",
+    "pathLabel": "專案路徑",
+    "pathPlaceholder": "~/Documents/my-project",
+    "nameLabel": "顯示名稱（選填）",
+    "namePlaceholder": "預設使用目錄名稱",
+    "addConfirm": "新增",
+    "detecting": "正在探索專案…",
+    "candidatesTitle": "自動探索",
+    "candidatesEmpty": "沒有發現新專案",
+    "candidateHasSkills": "{{count}} 個 skill 目錄",
+    "candidateNoSkills": "無 skill 目錄",
+    "register": "註冊",
+    "emptyTitle": "還沒有專案",
+    "emptyDesc": "新增一個專案，集中檢視並管理專案內的 skills。",
+    "skillsTab": "Skills",
+    "installSkill": "安裝 skill",
+    "imported": "已匯入 {{name}}",
+    "installed": "已安裝至 {{path}}",
+    "noSkillsTitle": "專案內沒有 skill",
+    "noSkillsDesc": "把中央庫的 skill 安裝到這個專案，或把專案裡的原生 skill 匯入中央庫。",
+    "openFolder": "開啟資料夾",
+    "reveal": "開啟位置",
+    "importToRoot": "匯入中央庫",
+    "remove": "移除專案",
+    "removeConfirm": "從列表中移除專案「{{name}}」？不會刪除磁碟上的任何檔案。",
+    "removed": "已移除專案「{{name}}」",
+    "deleteLink": "刪除連結",
+    "deleteLinkConfirm": "刪除「{{name}}」的託管連結？中央庫中的 skill 不受影響。",
+    "moveToTrash": "移至回收筒",
+    "moveToTrashConfirm": "把「{{name}}」移至 Skills Manager 回收筒？之後可從回收筒還原。",
+    "deleted": "已刪除",
+    "actionFailed": "操作失敗",
+    "managed": "託管",
+    "native": "原生",
+    "disabled": "已停用",
+    "installTitle": "安裝 skill 到專案",
+    "installDesc": "選擇一個 skill 安裝到「{{project}}」，並指定寫入哪個 agent 目錄。",
+    "targetDir": "目標目錄",
+    "searchSkill": "搜尋 skill…",
+    "noAvailableSkills": "沒有可安裝的 skill",
+    "installConfirm": "安裝"
   }
 }

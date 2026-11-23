@@ -12,7 +12,8 @@
     "githubBackup": "Backup",
     "settings": "Settings",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "projects": "Projects"
   },
   "header": {
     "marketplace": "Skill Marketplace",
@@ -619,7 +620,8 @@
     "disabled": "Not Enabled",
     "required": "Required",
     "notInstalled": "Not Installed",
-    "detected": "Detected"
+    "detected": "Detected",
+    "refresh": "Refresh"
   },
   "installDialog": {
     "title": "Install Skill: {{name}}",
@@ -635,5 +637,52 @@
     "details": "Details",
     "installed": "Installed",
     "install": "Install"
+  },
+  "projects": {
+    "listTitle": "Projects",
+    "title": "Projects",
+    "add": "Add project",
+    "addTitle": "Add project",
+    "addDesc": "Pick a project root. Skills Manager scans conventional folders such as .claude/skills.",
+    "pathLabel": "Project path",
+    "pathPlaceholder": "~/Documents/my-project",
+    "nameLabel": "Display name (optional)",
+    "namePlaceholder": "Defaults to the folder name",
+    "addConfirm": "Add",
+    "detecting": "Discovering projects…",
+    "candidatesTitle": "Discovered",
+    "candidatesEmpty": "No new projects found",
+    "candidateHasSkills": "{{count}} skill folders",
+    "candidateNoSkills": "No skill folders",
+    "register": "Register",
+    "emptyTitle": "No projects yet",
+    "emptyDesc": "Add a project to view and manage its skills in one place.",
+    "skillsTab": "Skills",
+    "installSkill": "Install skill",
+    "imported": "Imported {{name}}",
+    "installed": "Installed to {{path}}",
+    "noSkillsTitle": "No skills in this project",
+    "noSkillsDesc": "Install a skill from the central library, or import a native project skill into it.",
+    "openFolder": "Open folder",
+    "reveal": "Reveal",
+    "importToRoot": "Import to central",
+    "remove": "Remove project",
+    "removeConfirm": "Remove “{{name}}” from the list? No files on disk will be deleted.",
+    "removed": "Removed “{{name}}”",
+    "deleteLink": "Delete link",
+    "deleteLinkConfirm": "Delete the managed link for “{{name}}”? The central copy is untouched.",
+    "moveToTrash": "Move to trash",
+    "moveToTrashConfirm": "Move “{{name}}” to the Skills Manager trash? You can restore it later.",
+    "deleted": "Deleted",
+    "actionFailed": "Action failed",
+    "managed": "Managed",
+    "native": "Native",
+    "disabled": "Disabled",
+    "installTitle": "Install skill to project",
+    "installDesc": "Choose a skill to install into “{{project}}” and the agent folder to write.",
+    "targetDir": "Target folder",
+    "searchSkill": "Search skills…",
+    "noAvailableSkills": "No skills available",
+    "installConfirm": "Install"
   }
 }

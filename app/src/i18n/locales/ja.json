@@ -12,7 +12,8 @@
     "githubBackup": "バックアップ",
     "settings": "設定",
     "expand": "展開",
-    "collapse": "折りたたみ"
+    "collapse": "折りたたみ",
+    "projects": "プロジェクト"
   },
   "header": {
     "marketplace": "スキルマーケットプレイス",
@@ -618,7 +619,8 @@
     "disabled": "無効",
     "required": "必須",
     "notInstalled": "未インストール",
-    "detected": "検出済み"
+    "detected": "検出済み",
+    "refresh": "更新"
   },
   "installDialog": {
     "title": "スキルをインストール: {{name}}",
@@ -634,5 +636,52 @@
     "details": "詳細",
     "installed": "インストール済み",
     "install": "インストール"
+  },
+  "projects": {
+    "listTitle": "プロジェクト一覧",
+    "title": "プロジェクト",
+    "add": "プロジェクトを追加",
+    "addTitle": "プロジェクトを追加",
+    "addDesc": "プロジェクトのルートを選択します。.claude/skills などの規約ディレクトリを走査します。",
+    "pathLabel": "プロジェクトパス",
+    "pathPlaceholder": "~/Documents/my-project",
+    "nameLabel": "表示名（任意）",
+    "namePlaceholder": "既定ではフォルダ名を使用",
+    "addConfirm": "追加",
+    "detecting": "プロジェクトを検出中…",
+    "candidatesTitle": "自動検出",
+    "candidatesEmpty": "新しいプロジェクトはありません",
+    "candidateHasSkills": "{{count}} 個の skill フォルダ",
+    "candidateNoSkills": "skill フォルダなし",
+    "register": "登録",
+    "emptyTitle": "プロジェクトがありません",
+    "emptyDesc": "プロジェクトを追加すると、その中の skills をまとめて管理できます。",
+    "skillsTab": "Skills",
+    "installSkill": "skill をインストール",
+    "imported": "{{name}} をインポートしました",
+    "installed": "{{path}} にインストールしました",
+    "noSkillsTitle": "プロジェクト内に skill がありません",
+    "noSkillsDesc": "中央ライブラリの skill をインストールするか、プロジェクト内のネイティブ skill を中央へインポートしてください。",
+    "openFolder": "フォルダを開く",
+    "reveal": "場所を開く",
+    "importToRoot": "中央へインポート",
+    "remove": "プロジェクトを削除",
+    "removeConfirm": "「{{name}}」を一覧から削除しますか？ディスク上のファイルは削除されません。",
+    "removed": "「{{name}}」を削除しました",
+    "deleteLink": "リンクを削除",
+    "deleteLinkConfirm": "「{{name}}」の管理リンクを削除しますか？中央の skill は影響を受けません。",
+    "moveToTrash": "ゴミ箱へ移動",
+    "moveToTrashConfirm": "「{{name}}」を Skills Manager のゴミ箱へ移動しますか？後で復元できます。",
+    "deleted": "削除しました",
+    "actionFailed": "操作に失敗しました",
+    "managed": "管理",
+    "native": "ネイティブ",
+    "disabled": "無効",
+    "installTitle": "プロジェクトへ skill をインストール",
+    "installDesc": "「{{project}}」へインストールする skill と、書き込む agent フォルダを選択します。",
+    "targetDir": "対象フォルダ",
+    "searchSkill": "skill を検索…",
+    "noAvailableSkills": "インストール可能な skill がありません",
+    "installConfirm": "インストール"
   }
 }

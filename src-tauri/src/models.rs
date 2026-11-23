@@ -193,6 +193,9 @@ pub struct AppConfig {
     /// 用户在 Dashboard 中"置顶"的 skill_id 列表。前端据此把这些卡片排在最前面。
     #[serde(default)]
     pub pinned_skills: Vec<String>,
+    /// 已注册的项目（项目级 skill 管理）。
+    #[serde(default)]
+    pub projects: Vec<ProjectConfig>,
 }
 
 fn default_language() -> String {
@@ -214,8 +217,55 @@ impl Default for AppConfig {
             language: default_language(),
             skill_hide_prefixes: Vec::new(),
             pinned_skills: Vec::new(),
+            projects: Vec::new(),
         }
     }
+}
+
+/// 项目级 skill 配置。
+///
+/// 项目不是 agent，不参与 `skill_states` 的合并；只保存注册信息。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectConfig {
+    /// 稳定 ID：slug(name) + "-" + path hash 前 8 位
+    pub id: String,
+    /// 展示名，默认取目录名
+    pub name: String,
+    /// 项目根目录绝对路径
+    pub path: String,
+    /// 是否参与扫描
+    pub enabled: bool,
+    /// 是否由自动发现加入
+    #[serde(default)]
+    pub auto_detected: bool,
+}
+
+/// 项目内扫描到的一个 skill（不进入全局 skill_states）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectSkill {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    /// skill 目录绝对路径
+    pub path: String,
+    /// 相对项目根的目录，如 `.claude/skills/foo`
+    pub rel_dir: String,
+    /// 所属约定目录对应的 agent 名（claude/cursor/...）
+    pub agent: String,
+    pub is_symlink: bool,
+    /// 是否是指向 Skills Manager 中央库的托管链接
+    pub is_managed: bool,
+    pub last_updated: String,
+}
+
+/// 自动发现的项目候选。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectCandidate {
+    pub path: String,
+    pub name: String,
+    /// 该项目下检测到的约定 skill 目录（相对路径）
+    pub skill_dirs: Vec<String>,
+    pub registered: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

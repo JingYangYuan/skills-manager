@@ -12,7 +12,8 @@
     "githubBackup": "备份",
     "settings": "设置",
     "expand": "展开",
-    "collapse": "收起"
+    "collapse": "收起",
+    "projects": "项目"
   },
   "header": {
     "marketplace": "技能市场",
@@ -637,7 +638,8 @@
     "disabled": "未启用",
     "required": "必填",
     "notInstalled": "未安装",
-    "detected": "已检测"
+    "detected": "已检测",
+    "refresh": "刷新"
   },
   "installDialog": {
     "title": "安装技能: {{name}}",
@@ -653,5 +655,52 @@
     "details": "详情",
     "installed": "已安装",
     "install": "安装"
+  },
+  "projects": {
+    "listTitle": "项目列表",
+    "title": "项目",
+    "add": "添加项目",
+    "addTitle": "添加项目",
+    "addDesc": "选择项目根目录，Skills Manager 会扫描项目内 .claude/skills 等约定目录。",
+    "pathLabel": "项目路径",
+    "pathPlaceholder": "~/Documents/my-project",
+    "nameLabel": "显示名称（可选）",
+    "namePlaceholder": "默认使用目录名",
+    "addConfirm": "添加",
+    "detecting": "正在发现项目…",
+    "candidatesTitle": "自动发现",
+    "candidatesEmpty": "没有发现新项目",
+    "candidateHasSkills": "{{count}} 个 skill 目录",
+    "candidateNoSkills": "无 skill 目录",
+    "register": "注册",
+    "emptyTitle": "还没有项目",
+    "emptyDesc": "添加一个项目，集中查看并管理项目内的 skills。",
+    "skillsTab": "Skills",
+    "installSkill": "安装 skill",
+    "imported": "已导入 {{name}}",
+    "installed": "已安装到 {{path}}",
+    "noSkillsTitle": "项目内没有 skill",
+    "noSkillsDesc": "把中央库的 skill 安装到该项目，或把项目里的原生 skill 导入中央库。",
+    "openFolder": "打开文件夹",
+    "reveal": "打开位置",
+    "importToRoot": "导入中央库",
+    "remove": "移除项目",
+    "removeConfirm": "从列表中移除项目「{{name}}」？不会删除磁盘上的任何文件。",
+    "removed": "已移除项目「{{name}}」",
+    "deleteLink": "删除链接",
+    "deleteLinkConfirm": "删除「{{name}}」的托管链接？中央库中的 skill 不受影响。",
+    "moveToTrash": "移入回收站",
+    "moveToTrashConfirm": "把「{{name}}」移入 Skills Manager 回收站？之后可从回收站恢复。",
+    "deleted": "已删除",
+    "actionFailed": "操作失败",
+    "managed": "托管",
+    "native": "原生",
+    "disabled": "已停用",
+    "installTitle": "安装 skill 到项目",
+    "installDesc": "选择一个 skill 安装到「{{project}}」，并指定写入哪个 agent 目录。",
+    "targetDir": "目标目录",
+    "searchSkill": "搜索 skill…",
+    "noAvailableSkills": "没有可安装的 skill",
+    "installConfirm": "安装"
   }
 }

@@ -39,6 +39,7 @@ import IconExpandMore from '~icons/material-symbols/expand-more';
 import IconExtension from '~icons/material-symbols/extension-outline';
 import IconFilterAltOff from '~icons/material-symbols/filter-alt-off-outline';
 import IconFolderOpen from '~icons/material-symbols/folder-open-outline';
+import IconFolderShared from '~icons/material-symbols/folder-shared-outline';
 import IconFunctions from '~icons/material-symbols/functions';
 import IconHelp from '~icons/material-symbols/help-outline';
 import IconHistory from '~icons/material-symbols/history';
@@ -140,6 +141,7 @@ const ICONS: Record<string, IconComponent> = {
   extension: IconExtension,
   filter_alt_off: IconFilterAltOff,
   folder_open: IconFolderOpen,
+  folder_shared: IconFolderShared,
   functions: IconFunctions,
   help: IconHelp,
   history: IconHistory,

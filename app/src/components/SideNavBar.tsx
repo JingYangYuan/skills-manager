@@ -36,6 +36,7 @@ export default function SideNavBar() {
   const navItems: Array<{ id: Page; icon: string; label: string; shortcut: string; shortLabel: string }> = [
     { id: PAGE.SkillDownload, icon: 'storefront', label: t('nav.skillDownload'), shortcut: `${mod}A`, shortLabel: t('nav.marketplace') },
     { id: PAGE.Dashboard, icon: 'extension', label: t('nav.dashboard'), shortcut: `${mod}S`, shortLabel: t('nav.installed') },
+    { id: PAGE.Projects, icon: 'folder_shared', label: t('nav.projects'), shortcut: '', shortLabel: t('nav.projects') },
     { id: PAGE.GitHubBackup, icon: 'backup', label: t('nav.githubBackup'), shortcut: `${mod}D`, shortLabel: t('nav.backup') },
   ];
 

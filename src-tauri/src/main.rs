@@ -6,6 +6,7 @@ mod consolidate;
 mod github;
 mod linker;
 mod models;
+mod projects;
 mod scanner;
 mod settings;
 mod state;
@@ -288,6 +289,15 @@ pub fn run() {
             commands::marketplace::fetch_skill_detail,
             commands::marketplace::fetch_marketplace_skill_content,
             commands::marketplace::download_skill_from_marketplace,
+            commands::projects::list_projects,
+            commands::projects::add_project,
+            commands::projects::remove_project,
+            commands::projects::detect_project_candidates,
+            commands::projects::list_project_skills,
+            commands::projects::install_skill_to_project,
+            commands::projects::import_project_skill,
+            commands::projects::delete_project_skill,
+            commands::projects::open_project_path,
             commands::settings::get_agents,
             commands::settings::add_agent,
             commands::settings::remove_agent,

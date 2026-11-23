@@ -79,6 +79,47 @@ export interface AppConfig {
   agents: AgentConfig[];                  // List of configured agents
   skill_hide_prefixes?: string[];         // Prefix rules used to hide skills in UI and tray
   pinned_skills?: string[];               // Skill ids pinned to the top of the dashboard
+  projects?: ProjectConfig[];             // Registered projects (project-level skill management)
+}
+
+/** 已注册的项目（项目级 skill 管理） */
+export interface ProjectConfig {
+  /** 稳定 ID：slug(name) + '-' + path hash */
+  id: string;
+  /** 展示名，默认取目录名 */
+  name: string;
+  /** 项目根目录绝对路径 */
+  path: string;
+  /** 是否参与扫描 */
+  enabled: boolean;
+  /** 是否由自动发现加入 */
+  auto_detected?: boolean;
+}
+
+/** 项目内扫描到的一个 skill */
+export interface ProjectSkill {
+  id: string;
+  name: string;
+  description: string;
+  /** skill 目录绝对路径 */
+  path: string;
+  /** 相对项目根的目录，如 `.claude/skills/foo` */
+  rel_dir: string;
+  /** 所属约定目录对应的 agent 名 */
+  agent: string;
+  is_symlink: boolean;
+  /** 是否是指向 Skills Manager 中央库的托管链接 */
+  is_managed: boolean;
+  last_updated: string;
+}
+
+/** 自动发现的项目候选 */
+export interface ProjectCandidate {
+  path: string;
+  name: string;
+  /** 该项目下检测到的约定 skill 目录（相对路径） */
+  skill_dirs: string[];
+  registered: boolean;
 }
 
 export interface GitHubRepoConfig {

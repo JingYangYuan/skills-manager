@@ -10,9 +10,10 @@
  * - 对可能抛错的命令（GitHub API）返回合理的空态
  */
 
-import type { SkillMetadata, AppConfig, AgentConfig, GitHubConfig, SkillFileEntry, LinkType } from '@/types';
+import type { SkillMetadata, AppConfig, AgentConfig, GitHubConfig, SkillFileEntry, LinkType, ProjectConfig, ProjectSkill, ProjectCandidate } from '@/types';
 import { PREVIEW_SKILLS, PREVIEW_SKILL_CONTENT } from '../data/skills';
 import { PREVIEW_APP_CONFIG } from '../data/agents';
+import { PREVIEW_PROJECTS, PREVIEW_PROJECT_SKILLS } from '../data/projects';
 
 const STORAGE_KEY = 'preview:skills-v2';
 const CONFIG_KEY = 'preview:config-v2';
@@ -20,6 +21,8 @@ const CONFIG_KEY = 'preview:config-v2';
 type State = {
   skills: SkillMetadata[];
   config: AppConfig;
+  projects: ProjectConfig[];
+  projectSkills: Record<string, ProjectSkill[]>;
 };
 
 function deepClone<T>(v: T): T {
@@ -32,12 +35,20 @@ function loadState(): State {
   try {
     const skillsRaw = sessionStorage.getItem(STORAGE_KEY);
     const configRaw = sessionStorage.getItem(CONFIG_KEY);
+    const config: AppConfig = configRaw ? JSON.parse(configRaw) : deepClone(PREVIEW_APP_CONFIG);
     return {
       skills: skillsRaw ? JSON.parse(skillsRaw) : deepClone(PREVIEW_SKILLS),
-      config: configRaw ? JSON.parse(configRaw) : deepClone(PREVIEW_APP_CONFIG),
+      config,
+      projects: config.projects?.length ? config.projects : deepClone(PREVIEW_PROJECTS),
+      projectSkills: deepClone(PREVIEW_PROJECT_SKILLS),
     };
   } catch {
-    return { skills: deepClone(PREVIEW_SKILLS), config: deepClone(PREVIEW_APP_CONFIG) };
+    return {
+      skills: deepClone(PREVIEW_SKILLS),
+      config: deepClone(PREVIEW_APP_CONFIG),
+      projects: deepClone(PREVIEW_PROJECTS),
+      projectSkills: deepClone(PREVIEW_PROJECT_SKILLS),
+    };
   }
 }
 
@@ -183,6 +194,101 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown | Prom
       '在线预览暂不支持拖拽导入（浏览器无法访问本地文件系统）。请下载桌面版体验完整导入流程。',
     );
   },
+
+  // ---- projects ----
+  list_projects: () => simulateLatency(state.projects),
+
+  add_project: ({ path, name }) => {
+    const projectPath = String(path ?? '').trim();
+    if (!projectPath) throw new Error('项目路径不能为空');
+    if (state.projects.some((p) => p.path === projectPath)) {
+      throw new Error(`项目已注册: ${projectPath}`);
+    }
+    const folder = projectPath.split('/').filter(Boolean).pop() ?? 'project';
+    const project: ProjectConfig = {
+      id: `${folder.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now().toString(16).slice(-12)}`,
+      name: String(name ?? '').trim() || folder,
+      path: projectPath,
+      enabled: true,
+      auto_detected: false,
+    };
+    state.projects.push(project);
+    state.projectSkills[project.id] = [];
+    state.config.projects = state.projects;
+    persist();
+    return simulateLatency(project);
+  },
+
+  remove_project: ({ id }) => {
+    const projectId = String(id);
+    state.projects = state.projects.filter((p) => p.id !== projectId);
+    delete state.projectSkills[projectId];
+    state.config.projects = state.projects;
+    persist();
+    return simulateLatency(undefined);
+  },
+
+  detect_project_candidates: (): Promise<ProjectCandidate[]> =>
+    simulateLatency([
+      {
+        path: '~/Documents/new-paper',
+        name: 'new-paper',
+        skill_dirs: ['.claude/skills'],
+        registered: false,
+      },
+      {
+        path: '~/Documents/teaching-slides',
+        name: 'teaching-slides',
+        skill_dirs: [],
+        registered: false,
+      },
+    ]),
+
+  list_project_skills: ({ projectId }) =>
+    simulateLatency(state.projectSkills[String(projectId)] ?? []),
+
+  install_skill_to_project: ({ projectId, skillId, targetDir }) => {
+    const pid = String(projectId);
+    const project = state.projects.find((p) => p.id === pid);
+    if (!project) throw new Error(`项目不存在: ${pid}`);
+    const skill = findSkill(String(skillId));
+    if (!skill) throw new Error(`技能不存在: ${skillId}`);
+    const dir = String(targetDir ?? '.claude/skills');
+    const list = state.projectSkills[pid] ?? [];
+    if (list.some((s) => s.id === skill.id)) {
+      throw new Error(`项目目录中已存在技能 '${skill.name}'`);
+    }
+    const rel = `${dir}/${skill.id}`;
+    list.push({
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      path: `${project.path}/${rel}`,
+      rel_dir: rel,
+      agent: dir.split('/')[0].replace('.', ''),
+      is_symlink: true,
+      is_managed: true,
+      last_updated: '',
+    });
+    state.projectSkills[pid] = list;
+    return simulateLatency(`${project.path}/${rel}`);
+  },
+
+  import_project_skill: ({ projectId, skillPath }) => {
+    const list = state.projectSkills[String(projectId)] ?? [];
+    const found = list.find((s) => s.path === String(skillPath));
+    return simulateLatency(found?.name ?? 'project-skill');
+  },
+
+  delete_project_skill: ({ projectId, skillPath }) => {
+    const pid = String(projectId);
+    state.projectSkills[pid] = (state.projectSkills[pid] ?? []).filter(
+      (s) => s.path !== String(skillPath),
+    );
+    return simulateLatency(undefined);
+  },
+
+  open_project_path: () => simulateLatency(undefined),
 
   // ---- agents / config ----
   get_agents: () => simulateLatency(state.config.agents),

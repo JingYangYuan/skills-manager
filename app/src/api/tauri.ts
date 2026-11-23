@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { SkillMetadata, GitHubConfig, AgentConfig, AppConfig, SkillFileEntry, LinkType } from '@/types';
+import type { SkillMetadata, GitHubConfig, AgentConfig, AppConfig, SkillFileEntry, LinkType, ProjectConfig, ProjectSkill, ProjectCandidate } from '@/types';
 
 /** 链接校准报告（对应后端 RepairReport） */
 export interface RepairReport {
@@ -260,6 +260,57 @@ export const agentsApi = {
    */
   setSkillHidePrefixes: async (prefixes: string[]): Promise<void> => {
     await invoke('set_skill_hide_prefixes', { prefixes });
+  },
+};
+
+/** 项目级 skill 管理 */
+export const projectsApi = {
+  list: async (): Promise<ProjectConfig[]> => {
+    return await invoke<ProjectConfig[]>('list_projects');
+  },
+
+  add: async (path: string, name?: string): Promise<ProjectConfig> => {
+    return await invoke<ProjectConfig>('add_project', { path, name });
+  },
+
+  remove: async (id: string): Promise<void> => {
+    await invoke('remove_project', { id });
+  },
+
+  detectCandidates: async (): Promise<ProjectCandidate[]> => {
+    return await invoke<ProjectCandidate[]>('detect_project_candidates');
+  },
+
+  listSkills: async (projectId: string): Promise<ProjectSkill[]> => {
+    return await invoke<ProjectSkill[]>('list_project_skills', { projectId });
+  },
+
+  installSkill: async (
+    projectId: string,
+    skillId: string,
+    targetDir?: string,
+  ): Promise<string> => {
+    return await invoke<string>('install_skill_to_project', {
+      projectId,
+      skillId,
+      targetDir,
+    });
+  },
+
+  importSkill: async (projectId: string, skillPath: string): Promise<string> => {
+    return await invoke<string>('import_project_skill', { projectId, skillPath });
+  },
+
+  deleteSkill: async (
+    projectId: string,
+    skillPath: string,
+    mode: 'link' | 'trash',
+  ): Promise<void> => {
+    await invoke('delete_project_skill', { projectId, skillPath, mode });
+  },
+
+  openPath: async (projectId: string, rel?: string): Promise<void> => {
+    await invoke('open_project_path', { projectId, rel });
   },
 };
 

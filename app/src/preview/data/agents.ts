@@ -1,5 +1,6 @@
 import type { AgentConfig, AppConfig } from '@/types';
 import { LINK_TYPE } from '@/types';
+import { PREVIEW_PROJECTS } from './projects';
 
 /**
  * Preview 模式预设 agent 列表。
@@ -127,4 +128,5 @@ export const PREVIEW_APP_CONFIG: AppConfig = {
   agents: PREVIEW_AGENTS,
   skill_hide_prefixes: [],
   pinned_skills: ['pinned-demo'],
+  projects: PREVIEW_PROJECTS,
 };

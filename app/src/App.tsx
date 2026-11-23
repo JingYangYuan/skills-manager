@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import RootLayout from './RootLayout';
 import GitHubBackup from './pages/GitHubBackup';
+import Projects from './pages/Projects';
 import Settings from './pages/Settings';
 import SkillDownload from './pages/Marketplace/SkillDownload';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -30,6 +31,7 @@ function App() {
               {/* 默认跳转到下载页；Dashboard 由 RootLayout 始终挂载，始终可访问。 */}
               <Route index element={<Navigate to={ROUTE_PATH.SkillDownload} replace />} />
               <Route path={ROUTE_PATH.GitHubBackup.replace(/^\//, '')} element={<GitHubBackup />} />
+              <Route path={ROUTE_PATH.Projects.replace(/^\//, '')} element={<Projects />} />
               <Route path={ROUTE_PATH.Settings.replace(/^\//, '')} element={<Settings />} />
               <Route path={ROUTE_PATH.SkillDownload.replace(/^\//, '')} element={<SkillDownload />} />
             </Route>
