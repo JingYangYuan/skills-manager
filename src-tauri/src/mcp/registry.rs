@@ -1392,7 +1392,7 @@ fn preview_args(parts: &[ArgPart]) -> Vec<String> {
 }
 
 fn template_vars(template: &str) -> Vec<String> {
-    let mut out = Vec::new();
+    let mut out: Vec<String> = Vec::new();
     let mut chars = template.chars().peekable();
     while let Some(ch) = chars.next() {
         if ch != '{' {
