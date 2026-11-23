@@ -705,7 +705,7 @@
     "mcpTab": "MCP",
     "addMcp": "新增 MCP",
     "mcpEmptyTitle": "專案內還沒有 MCP server",
-    "mcpEmptyDesc": "新增專案級 MCP server，寫入 .mcp.json、.cursor/mcp.json 或 .grok/config.toml。",
+    "mcpEmptyDesc": "新增專案級 MCP server，依所選 Agent 寫入專案內的設定檔（如 .mcp.json、.agents/mcp_config.json、.cursor/mcp.json）。",
     "mcpTarget": "寫入檔案",
     "mcpSaved": "已儲存 MCP server",
     "mcpDeleted": "已刪除 MCP server",

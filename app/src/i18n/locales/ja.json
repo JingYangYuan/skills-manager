@@ -687,7 +687,7 @@
     "mcpTab": "MCP",
     "addMcp": "MCP を追加",
     "mcpEmptyTitle": "プロジェクト内に MCP server がありません",
-    "mcpEmptyDesc": "プロジェクト級 MCP server を追加し、.mcp.json、.cursor/mcp.json、.grok/config.toml のいずれかへ書き込みます。",
+    "mcpEmptyDesc": "プロジェクト級 MCP server を追加し、選択した Agent の設定ファイル（.mcp.json、.agents/mcp_config.json、.cursor/mcp.json など）へ書き込みます。",
     "mcpTarget": "書き込み先",
     "mcpSaved": "MCP server を保存しました",
     "mcpDeleted": "MCP server を削除しました",

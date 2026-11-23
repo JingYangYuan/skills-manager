@@ -706,7 +706,7 @@
     "mcpTab": "MCP",
     "addMcp": "添加 MCP",
     "mcpEmptyTitle": "项目内还没有 MCP server",
-    "mcpEmptyDesc": "添加项目级 MCP server，写入 .mcp.json、.cursor/mcp.json 或 .grok/config.toml。",
+    "mcpEmptyDesc": "添加项目级 MCP server，按所选 Agent 写入项目内的配置文件（如 .mcp.json、.agents/mcp_config.json、.cursor/mcp.json）。",
     "mcpTarget": "写入文件",
     "mcpSaved": "已保存 MCP server",
     "mcpDeleted": "已删除 MCP server",
