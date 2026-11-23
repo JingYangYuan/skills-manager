@@ -215,6 +215,7 @@ MCP 页面聚合各 Agent 的 MCP server 配置，支持全局与项目级管理
 | OpenCode | `~/.config/opencode/opencode.json` |
 | Codex | `~/.codex/config.toml` |
 | Grok | `~/.grok/config.toml` |
+| Hermes Agent | `~/.hermes/config.yaml`（只重写 `mcp_servers` 段） |
 | WorkBuddy | `~/.workbuddy/mcp.json` |
 | ZCode | `~/.zcode/cli/config.json` |
 | Pi | `~/.pi/agent/mcp.json` |
@@ -240,7 +241,7 @@ MCP 页面聚合各 Agent 的 MCP server 配置，支持全局与项目级管理
 
 ### 4.3 启用、同步与删除
 
-- 配置格式原生支持启用状态（Codex / Grok / OpenCode / Kilo / ZCode / Pi / Kimi / OpenClaw 的 `enabled`，Cursor / Antigravity / WorkBuddy / Kiro 的 `disabled`）时直接写回；其余 Agent 由应用托管停用状态，记录在 `~/.skills-manager/mcp-state.json`
+- 配置格式原生支持启用状态（Codex / Grok / OpenCode / Kilo / ZCode / Pi / Kimi / OpenClaw / Hermes 的 `enabled`，Cursor / Antigravity / WorkBuddy / Kiro 的 `disabled`）时直接写回；其余 Agent 由应用托管停用状态，记录在 `~/.skills-manager/mcp-state.json`
 - Antigravity 的远程 server 使用 `serverUrl` 字段，WorkBuddy 使用 `streamableHttp` 类型，写回时自动按各自格式处理
 - 详情面板可查看原始配置，并把当前定义同步到本机已检测到的 Agent
 - 写入前会备份为 `<原文件>.skills-manager.bak`；JSON / TOML 写回只改目标条目，保留其它字段与注释

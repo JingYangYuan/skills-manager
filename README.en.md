@@ -73,7 +73,7 @@ Built-in agent presets currently include **Claude Code, Cursor, Google Antigravi
 
 ### MCP Management
 
-- Aggregate MCP servers from 19 agents: Claude Code, Cursor, Antigravity (GUI / CLI), OpenClaw, OpenCode, Codex, Grok, WorkBuddy, ZCode, Pi, OMP, Kiro, Kilo Code, Kimi Code, GitHub Copilot, Trae, Qoder, CodeBuddy, and MarsCode
+- Aggregate MCP servers from 20 agents: Claude Code, Cursor, Antigravity (GUI / CLI), OpenClaw, OpenCode, Codex, Grok, Hermes Agent, WorkBuddy, ZCode, Pi, OMP, Kiro, Kilo Code, Kimi Code, GitHub Copilot, Trae, Qoder, CodeBuddy, and MarsCode
 - Add / edit / delete and enable or disable per agent; conflicting definitions are flagged
 - Sync across agents; every write is backed up to `*.skills-manager.bak`, and JSON / TOML edits preserve other fields and comments
 - Project-level MCP: `.mcp.json`, `.cursor/mcp.json`, `.agents/mcp_config.json` (Antigravity), `.codex/config.toml`, `.grok/config.toml`, `opencode.json`, `.kiro/settings/mcp.json`, `.kilo/kilo.json`, `.zcode/config.json`, `.github/mcp.json`, `.trae/mcp.json`, `.qoder/settings.local.json`, `.codebuddy/mcp.json`, `.kimi-code/mcp.json`, `.pi/mcp.json`, and `.omp/mcp.json`

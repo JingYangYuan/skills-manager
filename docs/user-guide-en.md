@@ -215,6 +215,7 @@ The MCP page aggregates MCP server configs across agents and manages both global
 | OpenCode | `~/.config/opencode/opencode.json` |
 | Codex | `~/.codex/config.toml` |
 | Grok | `~/.grok/config.toml` |
+| Hermes Agent | `~/.hermes/config.yaml` (only the `mcp_servers` block is rewritten) |
 | WorkBuddy | `~/.workbuddy/mcp.json` |
 | ZCode | `~/.zcode/cli/config.json` |
 | Pi | `~/.pi/agent/mcp.json` |
@@ -240,7 +241,7 @@ Environment values and header values are masked in the detail panel by default.
 
 ### 4.3 Enable, Sync, and Delete
 
-- Formats with a native enable flag (Codex / Grok / OpenCode / Kilo / ZCode / Pi / Kimi / OpenClaw `enabled`, Cursor / Antigravity / WorkBuddy / Kiro `disabled`) are written directly; other agents use a managed disabled state stored in `~/.skills-manager/mcp-state.json`
+- Formats with a native enable flag (Codex / Grok / OpenCode / Kilo / ZCode / Pi / Kimi / OpenClaw / Hermes `enabled`, Cursor / Antigravity / WorkBuddy / Kiro `disabled`) are written directly; other agents use a managed disabled state stored in `~/.skills-manager/mcp-state.json`
 - Antigravity remote servers use `serverUrl`; WorkBuddy uses the `streamableHttp` type; writes follow each format automatically
 - The detail panel can show raw config and copy the current definition to agents detected on this machine
 - Every write backs up the original to `<file>.skills-manager.bak`; JSON / TOML edits only touch the target entry and preserve other fields and comments

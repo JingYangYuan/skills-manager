@@ -1,5 +1,6 @@
 use crate::mcp::{
-    self, json_adapter, opencode_adapter, toml_adapter, McpAgentSpec, McpFormat, McpTarget,
+    self, json_adapter, opencode_adapter, toml_adapter, yaml_adapter, McpAgentSpec, McpFormat,
+    McpTarget,
 };
 use crate::models::{McpServerDef, McpTransport};
 use serde_json::Value;
@@ -327,6 +328,47 @@ fn opencode_local_and_remote_mapping() {
         root["mcp"]["servers"]["notion"]["url"],
         "https://mcp.notion.com/mcp"
     );
+}
+
+#[test]
+fn hermes_yaml_roundtrip_preserves_other_sections() {
+    let (_dir, path) = temp_file("config.yaml");
+    fs::write(
+        &path,
+        "# top comment\nmodel: test\n\n# mcp servers\nmcp_servers:\n  demo:\n    command: npx\n    args: [\"-y\", \"pkg\"]\n    timeout: 30\n    enabled: true\n\nmemory:\n  memory_enabled: false\n",
+    )
+    .unwrap();
+
+    let defs = yaml_adapter::read(&path).unwrap();
+    assert_eq!(defs.len(), 1);
+    assert_eq!(defs[0].command.as_deref(), Some("npx"));
+    assert_eq!(defs[0].args, vec!["-y".to_string(), "pkg".to_string()]);
+    assert!(defs[0].enabled);
+    assert_eq!(defs[0].extra["timeout"], 30);
+
+    let mut def = defs[0].clone();
+    def.enabled = false;
+    def.args.push("--flag".to_string());
+    yaml_adapter::upsert(&path, &def).unwrap();
+
+    let text = fs::read_to_string(&path).unwrap();
+    assert!(text.contains("# top comment"));
+    assert!(text.contains("memory:\n  memory_enabled: false"));
+
+    let defs = yaml_adapter::read(&path).unwrap();
+    assert_eq!(defs.len(), 1);
+    assert!(!defs[0].enabled);
+    assert_eq!(
+        defs[0].args,
+        vec!["-y".to_string(), "pkg".to_string(), "--flag".to_string()]
+    );
+    assert_eq!(defs[0].extra["timeout"], 30);
+
+    yaml_adapter::delete(&path, "demo").unwrap();
+    assert!(yaml_adapter::read(&path).unwrap().is_empty());
+    let text = fs::read_to_string(&path).unwrap();
+    assert!(text.contains("mcp_servers: {}"));
+    assert!(text.contains("memory:"));
 }
 
 #[test]

@@ -6,6 +6,7 @@
 //! - OpenCode：`mcp.servers` JSON（local / remote）
 //! - Kilo：顶层 `mcp.<name>`，形状与 OpenCode 相同
 //! - Codex / Grok：`[mcp_servers.*]` TOML
+//! - Hermes：`~/.hermes/config.yaml` 的 `mcp_servers` 段
 //!
 //! 写回时只改目标键，保留文件中的其它字段与注释（TOML 用 toml_edit）。
 
@@ -13,6 +14,7 @@ pub mod json_adapter;
 pub mod opencode_adapter;
 pub mod state;
 pub mod toml_adapter;
+pub mod yaml_adapter;
 
 use crate::models::{
     McpAgentInfo, McpBinding, McpConfigError, McpOverview, McpServerAggregate, McpServerDef,
@@ -30,6 +32,8 @@ pub enum McpFormat {
     /// Kilo Code：顶层 `mcp.<name>`，形状与 OpenCode 相同。
     Kilo,
     Toml,
+    /// Hermes Agent：`~/.hermes/config.yaml` 的 `mcp_servers` 段。
+    Yaml,
 }
 
 pub const STANDARD_JSON: JsonSpec = JsonSpec {
@@ -215,6 +219,12 @@ pub const GLOBAL_AGENTS: &[McpAgentSpec] = &[
         label: "Grok",
         format: McpFormat::Toml,
         rel_path: "~/.grok/config.toml",
+    },
+    McpAgentSpec {
+        agent: "hermes",
+        label: "Hermes Agent",
+        format: McpFormat::Yaml,
+        rel_path: "~/.hermes/config.yaml",
     },
     McpAgentSpec {
         agent: "workbuddy",
@@ -431,7 +441,7 @@ pub fn project_target(root: &Path, agent: &str) -> Option<McpTarget> {
 /// 该 agent 的格式是否原生支持 enabled / disabled 字段。
 pub fn supports_enabled_flag(spec: &McpAgentSpec) -> bool {
     match spec.format {
-        McpFormat::Toml | McpFormat::OpenCode | McpFormat::Kilo => true,
+        McpFormat::Toml | McpFormat::OpenCode | McpFormat::Kilo | McpFormat::Yaml => true,
         McpFormat::Json(json) => json.enabled != EnabledStyle::None,
     }
 }
@@ -442,6 +452,7 @@ pub fn read_servers(target: &McpTarget) -> Result<Vec<McpServerDef>, String> {
         McpFormat::OpenCode => opencode_adapter::read(&target.path),
         McpFormat::Kilo => opencode_adapter::read_flat(&target.path),
         McpFormat::Toml => toml_adapter::read(&target.path),
+        McpFormat::Yaml => yaml_adapter::read(&target.path),
     }
 }
 
@@ -451,6 +462,7 @@ pub fn upsert_server(target: &McpTarget, def: &McpServerDef) -> Result<(), Strin
         McpFormat::OpenCode => opencode_adapter::upsert(&target.path, def),
         McpFormat::Kilo => opencode_adapter::upsert_flat(&target.path, def),
         McpFormat::Toml => toml_adapter::upsert(&target.path, def),
+        McpFormat::Yaml => yaml_adapter::upsert(&target.path, def),
     }
 }
 
@@ -460,6 +472,7 @@ pub fn delete_server(target: &McpTarget, name: &str) -> Result<(), String> {
         McpFormat::OpenCode => opencode_adapter::delete(&target.path, name),
         McpFormat::Kilo => opencode_adapter::delete_flat(&target.path, name),
         McpFormat::Toml => toml_adapter::delete(&target.path, name),
+        McpFormat::Yaml => yaml_adapter::delete(&target.path, name),
     }
 }
 
@@ -500,6 +513,7 @@ pub fn raw_section(target: &McpTarget) -> Result<String, String> {
                 .map_err(|e| format!("序列化 MCP 配置失败: {}", e))
         }
         McpFormat::Toml => toml_adapter::render(&defs),
+        McpFormat::Yaml => yaml_adapter::render(&defs),
     }
 }
 
@@ -509,6 +523,7 @@ pub fn set_server_enabled(target: &McpTarget, name: &str, enabled: bool) -> Resu
         McpFormat::OpenCode => opencode_adapter::set_enabled(&target.path, name, enabled),
         McpFormat::Kilo => opencode_adapter::set_enabled_flat(&target.path, name, enabled),
         McpFormat::Toml => toml_adapter::set_enabled(&target.path, name, enabled),
+        McpFormat::Yaml => yaml_adapter::set_enabled(&target.path, name, enabled),
     }
 }
 

@@ -76,7 +76,7 @@
 
 ### MCP 管理
 
-- 聚合 19 个 Agent 的 MCP server 配置：Claude Code、Cursor、Antigravity（GUI / CLI）、OpenClaw、OpenCode、Codex、Grok、WorkBuddy、ZCode、Pi、OMP、Kiro、Kilo Code、Kimi Code、GitHub Copilot、Trae、Qoder、CodeBuddy、MarsCode
+- 聚合 20 个 Agent 的 MCP server 配置：Claude Code、Cursor、Antigravity（GUI / CLI）、OpenClaw、OpenCode、Codex、Grok、Hermes Agent、WorkBuddy、ZCode、Pi、OMP、Kiro、Kilo Code、Kimi Code、GitHub Copilot、Trae、Qoder、CodeBuddy、MarsCode
 - 新增 / 编辑 / 删除，按 Agent 启用或停用；同名 server 定义不一致时标记冲突
 - 跨 Agent 同步；写入前自动备份为 `*.skills-manager.bak`，JSON / TOML 写回保留其它字段与注释
 - 项目级 MCP：`.mcp.json`、`.cursor/mcp.json`、`.agents/mcp_config.json`（Antigravity）、`.codex/config.toml`、`.grok/config.toml`、`opencode.json`、`.kiro/settings/mcp.json`、`.kilo/kilo.json`、`.zcode/config.json`、`.github/mcp.json`、`.trae/mcp.json`、`.qoder/settings.local.json`、`.codebuddy/mcp.json`、`.kimi-code/mcp.json`、`.pi/mcp.json`、`.omp/mcp.json`
