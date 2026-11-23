@@ -280,11 +280,12 @@ fn apply_def(map: &mut Mapping, def: &McpServerDef) {
 }
 
 /// 把 `mcp_servers` 映射渲染成带缩进的 YAML 段。
-fn render_block(servers: &Mapping) -> String {
+fn render_block(servers: &Mapping) -> Result<String, String> {
     if servers.is_empty() {
-        return "mcp_servers: {}\n".to_string();
+        return Ok("mcp_servers: {}\n".to_string());
     }
-    let yaml = serde_yaml::to_string(&Value::Mapping(servers.clone())).unwrap_or_default();
+    let yaml = serde_yaml::to_string(&Value::Mapping(servers.clone()))
+        .map_err(|e| format!("序列化 Hermes MCP 配置失败: {}", e))?;
     let yaml = yaml.strip_prefix("---\n").unwrap_or(&yaml);
     let mut out = String::from("mcp_servers:\n");
     for line in yaml.lines() {
@@ -296,7 +297,7 @@ fn render_block(servers: &Mapping) -> String {
             out.push('\n');
         }
     }
-    out
+    Ok(out)
 }
 
 /// 替换文本中的顶层 `mcp_servers` 段；找不到时追加到末尾。
@@ -363,7 +364,7 @@ pub fn upsert(path: &Path, def: &McpServerDef) -> Result<(), String> {
     apply_def(&mut entry, def);
     servers.insert(Value::String(def.name.clone()), Value::Mapping(entry));
 
-    let new_text = replace_block(&text, &render_block(servers));
+    let new_text = replace_block(&text, &render_block(servers)?);
     serde_yaml::from_str::<Value>(&new_text)
         .map_err(|e| format!("生成的 Hermes 配置无效: {}", e))?;
     super::write_atomic(path, &new_text)
@@ -391,7 +392,7 @@ pub fn delete(path: &Path, name: &str) -> Result<(), String> {
         return Ok(());
     }
 
-    let new_text = replace_block(&text, &render_block(servers));
+    let new_text = replace_block(&text, &render_block(servers)?);
     serde_yaml::from_str::<Value>(&new_text)
         .map_err(|e| format!("生成的 Hermes 配置无效: {}", e))?;
     super::write_atomic(path, &new_text)
@@ -424,14 +425,14 @@ pub fn set_enabled(path: &Path, name: &str, enabled: bool) -> Result<(), String>
     );
     server.remove(&Value::String("disabled".to_string()));
 
-    let new_text = replace_block(&text, &render_block(servers));
+    let new_text = replace_block(&text, &render_block(servers)?);
     serde_yaml::from_str::<Value>(&new_text)
         .map_err(|e| format!("生成的 Hermes 配置无效: {}", e))?;
     super::write_atomic(path, &new_text)
 }
 
 /// 渲染原始配置预览（只含 `mcp_servers` 段）。
-pub fn render(defs: &[McpServerDef]) -> String {
+pub fn render(defs: &[McpServerDef]) -> Result<String, String> {
     let mut servers = Mapping::new();
     for def in defs {
         servers.insert(
