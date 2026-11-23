@@ -9,6 +9,7 @@
 export const PAGE = {
   Dashboard: 'dashboard',
   Projects: 'projects',
+  MCP: 'mcp',
   GitHubBackup: 'githubBackup',
   Settings: 'settings',
   SkillDownload: 'skillDownload',
@@ -23,6 +24,7 @@ export type Page = typeof PAGE[keyof typeof PAGE];
 export const ROUTE_PATH = {
   Dashboard: '/',
   Projects: '/projects',
+  MCP: '/mcp',
   GitHubBackup: '/github',
   Settings: '/settings',
   SkillDownload: '/download',
@@ -32,6 +34,8 @@ export const pageToPath = (page: Page): string => {
   switch (page) {
     case PAGE.Projects:
       return ROUTE_PATH.Projects;
+    case PAGE.MCP:
+      return ROUTE_PATH.MCP;
     case PAGE.GitHubBackup:
       return ROUTE_PATH.GitHubBackup;
     case PAGE.Settings:
@@ -46,6 +50,7 @@ export const pageToPath = (page: Page): string => {
 
 export const pathToPage = (pathname: string): Page => {
   if (pathname.startsWith(ROUTE_PATH.Projects)) return PAGE.Projects;
+  if (pathname.startsWith(ROUTE_PATH.MCP)) return PAGE.MCP;
   if (pathname.startsWith(ROUTE_PATH.GitHubBackup)) return PAGE.GitHubBackup;
   if (pathname.startsWith(ROUTE_PATH.Settings)) return PAGE.Settings;
   if (pathname.startsWith(ROUTE_PATH.SkillDownload)) return PAGE.SkillDownload;

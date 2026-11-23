@@ -122,6 +122,63 @@ export interface ProjectCandidate {
   registered: boolean;
 }
 
+// ========== MCP ==========
+
+export type McpTransport = 'stdio' | 'sse' | 'http';
+
+/** 与具体 agent 配置格式无关的 MCP server 定义 */
+export interface McpServerDef {
+  name: string;
+  transport: McpTransport;
+  command?: string;
+  args: string[];
+  env: Record<string, string>;
+  url?: string;
+  headers: Record<string, string>;
+  enabled: boolean;
+  /** 原始配置里未建模的字段 */
+  extra?: Record<string, unknown>;
+}
+
+export interface McpBinding {
+  agent: string;
+  config_path: string;
+  editable: boolean;
+  error?: string;
+  /** 该格式没有原生 enabled 字段时，由 Skills Manager 托管停用 */
+  managed_disabled: boolean;
+  /** 该绑定当前是否启用（已应用托管状态） */
+  enabled: boolean;
+}
+
+export interface McpServerAggregate {
+  name: string;
+  definition: McpServerDef;
+  bindings: McpBinding[];
+  /** 多个 agent 中同名 server 的定义不一致 */
+  conflict: boolean;
+  managed_disabled: string[];
+}
+
+export interface McpAgentInfo {
+  agent: string;
+  label: string;
+  config_path: string;
+  exists: boolean;
+}
+
+export interface McpConfigError {
+  agent: string;
+  config_path: string;
+  error: string;
+}
+
+export interface McpOverview {
+  servers: McpServerAggregate[];
+  agents: McpAgentInfo[];
+  errors: McpConfigError[];
+}
+
 export interface GitHubRepoConfig {
   owner: string;
   repo: string;

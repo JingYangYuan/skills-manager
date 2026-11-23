@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 // ========== Phase 1 新模型 ==========
 
@@ -267,6 +267,97 @@ pub struct ProjectCandidate {
     pub skill_dirs: Vec<String>,
     pub registered: bool,
 }
+
+// ========== MCP ==========
+
+/// MCP 传输方式。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum McpTransport {
+    Stdio,
+    Sse,
+    Http,
+}
+
+/// 与具体 agent 配置格式无关的 MCP server 定义。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpServerDef {
+    pub name: String,
+    pub transport: McpTransport,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+    /// 原始配置里未建模的字段，供 UI 展示 / 保真写回参考。
+    #[serde(default, skip_serializing_if = "serde_json::Value::is_null")]
+    pub extra: serde_json::Value,
+}
+
+fn default_enabled() -> bool {
+    true
+}
+
+/// 某个 MCP server 在某个 agent 配置中的绑定。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpBinding {
+    pub agent: String,
+    pub config_path: String,
+    /// 该 agent 的配置格式是否支持写回
+    pub editable: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// 该格式没有原生 enabled 字段时，由 Skills Manager 托管停用
+    pub managed_disabled: bool,
+    /// 该绑定当前是否启用（已应用托管状态）
+    pub enabled: bool,
+}
+
+/// 同名 MCP server 的聚合视图。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpServerAggregate {
+    pub name: String,
+    /// 以第一个绑定为准的定义（已应用托管停用状态）
+    pub definition: McpServerDef,
+    pub bindings: Vec<McpBinding>,
+    /// 多个 agent 中同名 server 的定义不一致
+    pub conflict: bool,
+    /// 通过托管状态停用的 agent 列表
+    pub managed_disabled: Vec<String>,
+}
+
+/// 一个可管理的 MCP 配置文件。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpAgentInfo {
+    pub agent: String,
+    pub label: String,
+    pub config_path: String,
+    pub exists: bool,
+}
+
+/// 读取某个 agent 的 MCP 配置时的错误（不影响其它 agent 的展示）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpConfigError {
+    pub agent: String,
+    pub config_path: String,
+    pub error: String,
+}
+
+/// MCP 总览：聚合结果 + 可用目标 + 读取错误。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpOverview {
+    pub servers: Vec<McpServerAggregate>,
+    pub agents: Vec<McpAgentInfo>,
+    pub errors: Vec<McpConfigError>,
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GitHubConfig {

@@ -7,6 +7,7 @@ import type { ProjectConfig, ProjectSkill } from '@/types';
 import { useProjectSkills } from '../hooks/useProjectSkills';
 import { ProjectSkillCard } from './ProjectSkillCard';
 import { InstallToProjectModal } from './InstallToProjectModal';
+import { ProjectMcpPanel } from './ProjectMcpPanel';
 
 interface ProjectDetailProps {
   project: ProjectConfig;
@@ -27,6 +28,7 @@ export function ProjectDetail({ project, onRemove }: ProjectDetailProps) {
   const { showToast } = useToast();
   const { skills, loading, error, refresh, installSkill, importSkill, deleteSkill } =
     useProjectSkills(project.id);
+  const [activeTab, setActiveTab] = useState<'skills' | 'mcp'>('skills');
   const [installOpen, setInstallOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -118,6 +120,32 @@ export function ProjectDetail({ project, onRemove }: ProjectDetailProps) {
         </div>
       </div>
 
+      <div className="px-6 pt-3 flex items-center gap-1 border-b border-[var(--border-color)] dark:border-dark-border">
+        {([
+          ['skills', t('projects.skillsTab'), 'extension'],
+          ['mcp', t('projects.mcpTab'), 'hub'],
+        ] as const).map(([id, label, icon]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+              activeTab === id
+                ? 'border-[var(--accent-primary)] text-[var(--accent-primary)]'
+                : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Icon name={icon} className="text-base" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'mcp' ? (
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <ProjectMcpPanel projectId={project.id} />
+        </div>
+      ) : (
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -180,6 +208,7 @@ export function ProjectDetail({ project, onRemove }: ProjectDetailProps) {
           </div>
         )}
       </div>
+      )}
 
       <InstallToProjectModal
         open={installOpen}

@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import RootLayout from './RootLayout';
 import GitHubBackup from './pages/GitHubBackup';
 import Projects from './pages/Projects';
+import MCP from './pages/MCP';
 import Settings from './pages/Settings';
 import SkillDownload from './pages/Marketplace/SkillDownload';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -32,6 +33,7 @@ function App() {
               <Route index element={<Navigate to={ROUTE_PATH.SkillDownload} replace />} />
               <Route path={ROUTE_PATH.GitHubBackup.replace(/^\//, '')} element={<GitHubBackup />} />
               <Route path={ROUTE_PATH.Projects.replace(/^\//, '')} element={<Projects />} />
+              <Route path={ROUTE_PATH.MCP.replace(/^\//, '')} element={<MCP />} />
               <Route path={ROUTE_PATH.Settings.replace(/^\//, '')} element={<Settings />} />
               <Route path={ROUTE_PATH.SkillDownload.replace(/^\//, '')} element={<SkillDownload />} />
             </Route>

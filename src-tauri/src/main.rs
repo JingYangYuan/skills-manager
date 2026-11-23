@@ -5,6 +5,7 @@ mod commands;
 mod consolidate;
 mod github;
 mod linker;
+mod mcp;
 mod models;
 mod projects;
 mod scanner;
@@ -298,6 +299,16 @@ pub fn run() {
             commands::projects::import_project_skill,
             commands::projects::delete_project_skill,
             commands::projects::open_project_path,
+            commands::mcp::list_mcp_servers,
+            commands::mcp::save_mcp_server,
+            commands::mcp::delete_mcp_server,
+            commands::mcp::set_mcp_server_enabled,
+            commands::mcp::sync_mcp_server,
+            commands::mcp::get_mcp_raw_config,
+            commands::mcp::list_project_mcp,
+            commands::mcp::get_project_mcp_raw_config,
+            commands::mcp::save_project_mcp,
+            commands::mcp::delete_project_mcp,
             commands::settings::get_agents,
             commands::settings::add_agent,
             commands::settings::remove_agent,

@@ -3,6 +3,7 @@
 
 mod consolidate;
 mod linker;
+mod mcp;
 mod models;
 mod projects;
 mod scanner;
