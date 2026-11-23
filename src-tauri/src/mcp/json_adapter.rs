@@ -124,15 +124,15 @@ fn parse_server(name: &str, value: &Value) -> Option<McpServerDef> {
 
 /// 把统一模型渲染成便于查看的 JSON 对象（只含 MCP 字段）。
 pub fn def_to_value(def: &McpServerDef) -> Value {
-    render_def(def, "url")
+    render_def(def, "url", true)
 }
 
-/// Antigravity 用 `serverUrl` 表示远程地址。
+/// Antigravity 用 `serverUrl` 表示远程地址，且不写 `type`。
 pub fn def_to_value_antigravity(def: &McpServerDef) -> Value {
-    render_def(def, "serverUrl")
+    render_def(def, "serverUrl", false)
 }
 
-fn render_def(def: &McpServerDef, remote_key: &str) -> Value {
+fn render_def(def: &McpServerDef, remote_key: &str, include_type: bool) -> Value {
     let mut obj = Map::new();
     match def.transport {
         McpTransport::Stdio => {
@@ -153,16 +153,18 @@ fn render_def(def: &McpServerDef, remote_key: &str) -> Value {
             if let Some(url) = &def.url {
                 obj.insert(remote_key.to_string(), Value::String(url.clone()));
             }
-            obj.insert(
-                "type".to_string(),
-                Value::String(
-                    match def.transport {
-                        McpTransport::Sse => "sse",
-                        _ => "http",
-                    }
-                    .to_string(),
-                ),
-            );
+            if include_type {
+                obj.insert(
+                    "type".to_string(),
+                    Value::String(
+                        match def.transport {
+                            McpTransport::Sse => "sse",
+                            _ => "http",
+                        }
+                        .to_string(),
+                    ),
+                );
+            }
             if !def.headers.is_empty() {
                 obj.insert("headers".to_string(), env_to_json(&def.headers));
             }
