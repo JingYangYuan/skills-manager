@@ -1,6 +1,6 @@
 //! MCP 托管停用状态。
 //!
-//! Claude / Antigravity 的配置没有 `enabled` 字段，无法直接表达"停用但仍保留"。
+//! Claude 的配置没有 `enabled` / `disabled` 字段，无法直接表达"停用但仍保留"。
 //! 这类 agent 的开关记录在 `~/.skills-manager/mcp-state.json`，扫描时再应用。
 
 use crate::settings::AppSettingsManager;
