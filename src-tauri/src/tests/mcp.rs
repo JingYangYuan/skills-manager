@@ -44,7 +44,7 @@ fn json_roundtrip_preserves_unknown_fields() {
 
     let mut def = defs[0].clone();
     def.args.push("--flag".to_string());
-    json_adapter::upsert(&path, &def, false).unwrap();
+    json_adapter::upsert(&path, &def, false, true).unwrap();
 
     let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(root["mcpServers"]["demo"]["timeout"], 30);
@@ -65,7 +65,7 @@ fn json_http_server_uses_url_and_type() {
         enabled: true,
         extra: Value::Null,
     };
-    json_adapter::upsert(&path, &def, false).unwrap();
+    json_adapter::upsert(&path, &def, false, true).unwrap();
 
     let defs = json_adapter::read(&path).unwrap();
     assert_eq!(defs[0].transport, McpTransport::Http);

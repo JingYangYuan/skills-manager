@@ -173,6 +173,14 @@ export function ProjectMcpPanel({ projectId }: ProjectMcpPanelProps) {
           for (const target of targets) {
             await mcpApi.saveProject(projectId, server, target);
           }
+          if (editing) {
+            const removed = editing.bindings
+              .map((binding) => binding.agent)
+              .filter((agent) => !targets.includes(agent));
+            for (const agent of removed) {
+              await mcpApi.removeProject(projectId, server.name, agent);
+            }
+          }
           await refresh();
           setSelectedName(server.name);
           showToast('success', t('projects.mcpSaved'));

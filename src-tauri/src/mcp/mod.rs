@@ -162,7 +162,15 @@ pub fn read_servers(target: &McpTarget) -> Result<Vec<McpServerDef>, String> {
 
 pub fn upsert_server(target: &McpTarget, def: &McpServerDef) -> Result<(), String> {
     match target.spec.format {
-        McpFormat::Json => json_adapter::upsert(&target.path, def, supports_enabled_flag(&target.spec)),
+        McpFormat::Json => {
+            let write_type = matches!(target.spec.agent, "claude" | "antigravity");
+            json_adapter::upsert(
+                &target.path,
+                def,
+                supports_enabled_flag(&target.spec),
+                write_type,
+            )
+        }
         McpFormat::OpenCode => opencode_adapter::upsert(&target.path, def),
         McpFormat::Toml => toml_adapter::upsert(&target.path, def),
     }

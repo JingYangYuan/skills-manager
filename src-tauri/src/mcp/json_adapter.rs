@@ -130,16 +130,21 @@ pub fn def_to_value(def: &McpServerDef) -> Value {
             if let Some(url) = &def.url {
                 obj.insert("url".to_string(), Value::String(url.clone()));
             }
-            obj.insert(
-                "type".to_string(),
-                Value::String(
-                    match def.transport {
-                        McpTransport::Sse => "sse",
-                        _ => "http",
-                    }
-                    .to_string(),
-                ),
-            );
+            if write_type {
+                obj.insert(
+                    "type".to_string(),
+                    Value::String(
+                        match def.transport {
+                            McpTransport::Sse => "sse",
+                            _ => "http",
+                        }
+                        .to_string(),
+                    ),
+                );
+            } else if let Some(old_type) = old_type.clone() {
+                // Cursor 这类按 URL 推断传输方式的配置：保留原有 type，不主动新增。
+                obj.insert("type".to_string(), old_type);
+            }
             if !def.headers.is_empty() {
                 obj.insert("headers".to_string(), env_to_json(&def.headers));
             }
@@ -157,9 +162,15 @@ fn env_to_json(env: &BTreeMap<String, String>) -> Value {
     )
 }
 
-fn apply_def(obj: &mut Map<String, Value>, def: &McpServerDef, supports_enabled: bool) {
+fn apply_def(
+    obj: &mut Map<String, Value>,
+    def: &McpServerDef,
+    supports_enabled: bool,
+    write_type: bool,
+) {
     let had_enabled = obj.contains_key("enabled");
     let had_disabled = obj.contains_key("disabled");
+    let old_type = obj.get("type").cloned();
     for key in KNOWN_KEYS {
         obj.remove(*key);
     }
@@ -218,7 +229,12 @@ fn apply_def(obj: &mut Map<String, Value>, def: &McpServerDef, supports_enabled:
     }
 }
 
-pub fn upsert(path: &Path, def: &McpServerDef, supports_enabled: bool) -> Result<(), String> {
+pub fn upsert(
+    path: &Path,
+    def: &McpServerDef,
+    supports_enabled: bool,
+    write_type: bool,
+) -> Result<(), String> {
     let mut root = read_root(path)?;
     let root_obj = root
         .as_object_mut()
@@ -234,7 +250,7 @@ pub fn upsert(path: &Path, def: &McpServerDef, supports_enabled: bool) -> Result
         Some(Value::Object(map)) => map.clone(),
         _ => Map::new(),
     };
-    apply_def(&mut obj, def, supports_enabled);
+    apply_def(&mut obj, def, supports_enabled, write_type);
     servers.insert(def.name.clone(), Value::Object(obj));
 
     let content = serde_json::to_string_pretty(&root)

@@ -192,6 +192,14 @@ export default function MCP() {
         onClose={() => setFormOpen(false)}
         onSubmit={async (server, targets) => {
           await save(server, targets);
+          if (editing) {
+            const removed = editing.bindings
+              .map((binding) => binding.agent)
+              .filter((agent) => !targets.includes(agent));
+            if (removed.length > 0) {
+              await remove(server.name, removed);
+            }
+          }
           setSelectedName(server.name);
           showToast('success', t('mcp.saved', { name: server.name }));
         }}
