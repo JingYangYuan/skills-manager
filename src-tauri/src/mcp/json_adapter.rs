@@ -7,7 +7,15 @@ use std::fs;
 use std::path::Path;
 
 const KNOWN_KEYS: &[&str] = &[
-    "type", "command", "args", "env", "url", "headers", "enabled", "disabled",
+    "type",
+    "command",
+    "args",
+    "env",
+    "url",
+    "serverUrl",
+    "headers",
+    "enabled",
+    "disabled",
 ];
 
 fn read_root(path: &Path) -> Result<Value, String> {
@@ -55,7 +63,11 @@ fn parse_server(name: &str, value: &Value) -> Option<McpServerDef> {
         .get("command")
         .and_then(Value::as_str)
         .map(str::to_string);
-    let url = obj.get("url").and_then(Value::as_str).map(str::to_string);
+    let url = obj
+        .get("url")
+        .or_else(|| obj.get("serverUrl"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
     let transport = obj
         .get("type")
         .and_then(Value::as_str)
@@ -65,7 +77,9 @@ fn parse_server(name: &str, value: &Value) -> Option<McpServerDef> {
             _ => McpTransport::Stdio,
         })
         .unwrap_or_else(|| {
-            if url.is_some() {
+            if obj.get("serverUrl").is_some() {
+                McpTransport::Http
+            } else if url.is_some() {
                 McpTransport::Sse
             } else {
                 McpTransport::Stdio
@@ -110,6 +124,15 @@ fn parse_server(name: &str, value: &Value) -> Option<McpServerDef> {
 
 /// 把统一模型渲染成便于查看的 JSON 对象（只含 MCP 字段）。
 pub fn def_to_value(def: &McpServerDef) -> Value {
+    render_def(def, "url")
+}
+
+/// Antigravity 用 `serverUrl` 表示远程地址。
+pub fn def_to_value_antigravity(def: &McpServerDef) -> Value {
+    render_def(def, "serverUrl")
+}
+
+fn render_def(def: &McpServerDef, remote_key: &str) -> Value {
     let mut obj = Map::new();
     match def.transport {
         McpTransport::Stdio => {
@@ -128,23 +151,18 @@ pub fn def_to_value(def: &McpServerDef) -> Value {
         }
         McpTransport::Sse | McpTransport::Http => {
             if let Some(url) = &def.url {
-                obj.insert("url".to_string(), Value::String(url.clone()));
+                obj.insert(remote_key.to_string(), Value::String(url.clone()));
             }
-            if write_type {
-                obj.insert(
-                    "type".to_string(),
-                    Value::String(
-                        match def.transport {
-                            McpTransport::Sse => "sse",
-                            _ => "http",
-                        }
-                        .to_string(),
-                    ),
-                );
-            } else if let Some(old_type) = old_type.clone() {
-                // Cursor 这类按 URL 推断传输方式的配置：保留原有 type，不主动新增。
-                obj.insert("type".to_string(), old_type);
-            }
+            obj.insert(
+                "type".to_string(),
+                Value::String(
+                    match def.transport {
+                        McpTransport::Sse => "sse",
+                        _ => "http",
+                    }
+                    .to_string(),
+                ),
+            );
             if !def.headers.is_empty() {
                 obj.insert("headers".to_string(), env_to_json(&def.headers));
             }
@@ -167,6 +185,7 @@ fn apply_def(
     def: &McpServerDef,
     supports_enabled: bool,
     write_type: bool,
+    remote_key: &str,
 ) {
     let had_enabled = obj.contains_key("enabled");
     let had_disabled = obj.contains_key("disabled");
@@ -192,18 +211,23 @@ fn apply_def(
         }
         McpTransport::Sse | McpTransport::Http => {
             if let Some(url) = &def.url {
-                obj.insert("url".to_string(), Value::String(url.clone()));
+                obj.insert(remote_key.to_string(), Value::String(url.clone()));
             }
-            obj.insert(
-                "type".to_string(),
-                Value::String(
-                    match def.transport {
-                        McpTransport::Sse => "sse",
-                        _ => "http",
-                    }
-                    .to_string(),
-                ),
-            );
+            if write_type {
+                obj.insert(
+                    "type".to_string(),
+                    Value::String(
+                        match def.transport {
+                            McpTransport::Sse => "sse",
+                            _ => "http",
+                        }
+                        .to_string(),
+                    ),
+                );
+            } else if let Some(old_type) = old_type {
+                // Cursor 这类按 URL 推断传输方式的配置：保留原有 type，不主动新增。
+                obj.insert("type".to_string(), old_type);
+            }
             if !def.headers.is_empty() {
                 obj.insert("headers".to_string(), env_to_json(&def.headers));
             }
@@ -235,6 +259,21 @@ pub fn upsert(
     supports_enabled: bool,
     write_type: bool,
 ) -> Result<(), String> {
+    upsert_inner(path, def, supports_enabled, write_type, "url")
+}
+
+/// Antigravity：远程地址写 `serverUrl`，启用状态写 `disabled`，不写 `type`。
+pub fn upsert_antigravity(path: &Path, def: &McpServerDef) -> Result<(), String> {
+    upsert_inner(path, def, true, false, "serverUrl")
+}
+
+fn upsert_inner(
+    path: &Path,
+    def: &McpServerDef,
+    supports_enabled: bool,
+    write_type: bool,
+    remote_key: &str,
+) -> Result<(), String> {
     let mut root = read_root(path)?;
     let root_obj = root
         .as_object_mut()
@@ -250,7 +289,7 @@ pub fn upsert(
         Some(Value::Object(map)) => map.clone(),
         _ => Map::new(),
     };
-    apply_def(&mut obj, def, supports_enabled, write_type);
+    apply_def(&mut obj, def, supports_enabled, write_type, remote_key);
     servers.insert(def.name.clone(), Value::Object(obj));
 
     let content = serde_json::to_string_pretty(&root)

@@ -143,12 +143,12 @@ pub fn project_target(root: &Path, agent: &str) -> Option<McpTarget> {
         .find(|target| target.spec.agent == agent)
 }
 
-/// 该 agent 的格式是否原生支持 enabled 字段。
+/// 该 agent 的格式是否原生支持 enabled / disabled 字段。
 pub fn supports_enabled_flag(spec: &McpAgentSpec) -> bool {
     match spec.format {
         McpFormat::Toml => true,
         McpFormat::OpenCode => true,
-        McpFormat::Json => spec.agent == "cursor",
+        McpFormat::Json => matches!(spec.agent, "cursor" | "antigravity"),
     }
 }
 
@@ -163,13 +163,17 @@ pub fn read_servers(target: &McpTarget) -> Result<Vec<McpServerDef>, String> {
 pub fn upsert_server(target: &McpTarget, def: &McpServerDef) -> Result<(), String> {
     match target.spec.format {
         McpFormat::Json => {
-            let write_type = matches!(target.spec.agent, "claude" | "antigravity");
-            json_adapter::upsert(
-                &target.path,
-                def,
-                supports_enabled_flag(&target.spec),
-                write_type,
-            )
+            if target.spec.agent == "antigravity" {
+                json_adapter::upsert_antigravity(&target.path, def)
+            } else {
+                let write_type = target.spec.agent == "claude";
+                json_adapter::upsert(
+                    &target.path,
+                    def,
+                    supports_enabled_flag(&target.spec),
+                    write_type,
+                )
+            }
         }
         McpFormat::OpenCode => opencode_adapter::upsert(&target.path, def),
         McpFormat::Toml => toml_adapter::upsert(&target.path, def),
@@ -188,12 +192,17 @@ pub fn delete_server(target: &McpTarget, name: &str) -> Result<(), String> {
 ///
 /// 不返回整个文件：`~/.claude.json` 等文件还包含账号信息与项目历史。
 pub fn raw_section(target: &McpTarget) -> Result<String, String> {
-    let defs = read_servers(target)?;
+    let defs: Vec<McpServerDef> = read_servers(target)?.iter().map(redact).collect();
     match target.spec.format {
         McpFormat::Json => {
             let mut map = serde_json::Map::new();
             for def in &defs {
-                map.insert(def.name.clone(), json_adapter::def_to_value(def));
+                let value = if target.spec.agent == "antigravity" {
+                    json_adapter::def_to_value_antigravity(def)
+                } else {
+                    json_adapter::def_to_value(def)
+                };
+                map.insert(def.name.clone(), value);
             }
             let root = serde_json::json!({ "mcpServers": map });
             serde_json::to_string_pretty(&root)
@@ -307,6 +316,18 @@ pub fn state_key(prefix: &str, agent: &str) -> String {
     } else {
         format!("{}:{}", prefix, agent)
     }
+}
+
+/// 预览原始配置时隐藏 env / headers 的值，避免密钥出现在界面上。
+fn redact(def: &McpServerDef) -> McpServerDef {
+    let mut clone = def.clone();
+    for value in clone.env.values_mut() {
+        *value = "••••••".to_string();
+    }
+    for value in clone.headers.values_mut() {
+        *value = "••••••".to_string();
+    }
+    clone
 }
 
 fn same_definition(a: &McpServerDef, b: &McpServerDef) -> bool {

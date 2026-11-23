@@ -77,6 +77,64 @@ fn json_http_server_uses_url_and_type() {
 }
 
 #[test]
+fn json_remote_omits_type_when_not_requested() {
+    let (_dir, path) = temp_file("cursor.json");
+    let def = McpServerDef {
+        name: "remote".to_string(),
+        transport: McpTransport::Http,
+        command: None,
+        args: vec![],
+        env: BTreeMap::new(),
+        url: Some("https://example.com/mcp".to_string()),
+        headers: BTreeMap::new(),
+        enabled: true,
+        extra: Value::Null,
+    };
+    json_adapter::upsert(&path, &def, false, false).unwrap();
+
+    let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(root["mcpServers"]["remote"].get("type").is_none());
+    assert_eq!(
+        root["mcpServers"]["remote"]["url"],
+        "https://example.com/mcp"
+    );
+}
+
+#[test]
+fn antigravity_uses_server_url_and_disabled() {
+    let (_dir, path) = temp_file("mcp_config.json");
+    fs::write(
+        &path,
+        r#"{"mcpServers":{"notion":{"serverUrl":"https://mcp.notion.com/mcp","headers":{"Authorization":"Bearer x"},"disabled":true},"local":{"command":"npx","args":["-y","pkg"]}}}"#,
+    )
+    .unwrap();
+
+    let defs = json_adapter::read(&path).unwrap();
+    let notion = defs.iter().find(|def| def.name == "notion").unwrap();
+    assert_eq!(notion.transport, McpTransport::Http);
+    assert_eq!(notion.url.as_deref(), Some("https://mcp.notion.com/mcp"));
+    assert!(!notion.enabled);
+
+    let local = defs.iter().find(|def| def.name == "local").unwrap();
+    assert_eq!(local.transport, McpTransport::Stdio);
+    assert!(local.enabled);
+
+    json_adapter::upsert_antigravity(&path, notion).unwrap();
+    let root: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(root["mcpServers"]["notion"].get("url").is_none());
+    assert!(root["mcpServers"]["notion"].get("type").is_none());
+    assert_eq!(
+        root["mcpServers"]["notion"]["serverUrl"],
+        "https://mcp.notion.com/mcp"
+    );
+    assert_eq!(root["mcpServers"]["notion"]["disabled"], true);
+    assert_eq!(
+        root["mcpServers"]["notion"]["headers"]["Authorization"],
+        "Bearer x"
+    );
+}
+
+#[test]
 fn opencode_local_and_remote_mapping() {
     let (_dir, path) = temp_file("opencode.json");
     fs::write(
@@ -167,6 +225,21 @@ fn toml_creates_missing_tables() {
     let defs = toml_adapter::read(&path).unwrap();
     assert_eq!(defs[0].name, "new");
     assert_eq!(defs[0].command.as_deref(), Some("uvx"));
+}
+
+#[test]
+fn raw_section_redacts_env_and_headers() {
+    let (_dir, path) = temp_file("mcp.json");
+    fs::write(
+        &path,
+        r#"{"mcpServers":{"demo":{"command":"npx","env":{"TOKEN":"supersecret"},"headers":{"Authorization":"Bearer x"}}}}"#,
+    )
+    .unwrap();
+
+    let text = mcp::raw_section(&target("claude", &path)).unwrap();
+    assert!(!text.contains("supersecret"));
+    assert!(!text.contains("Bearer x"));
+    assert!(text.contains("TOKEN"));
 }
 
 #[test]
